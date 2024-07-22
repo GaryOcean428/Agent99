@@ -1,10 +1,35 @@
+"""
+This module handles the generation of responses for the Chat99 AI assistant.
+It integrates with the Anthropic API and manages the conversation flow.
+"""
+
+from typing import List, Dict, Any
 from anthropic import Anthropic
 from input_analyzer import analyze_input
 
 client = Anthropic()
 
-def generate_response(model_name, system_prompt, conversation, max_tokens, temperature):
-    user_input = conversation[-1]['content']
+def generate_response(
+    model_name: str,
+    system_prompt: str,
+    messages: List[Dict[str, str]],
+    max_tokens: int,
+    temperature: float
+) -> str:
+    """
+    Generate a response from the AI model using the Anthropic API.
+
+    Args:
+        model_name (str): The name of the AI model to use.
+        system_prompt (str): The system prompt to guide the AI's behavior.
+        messages (List[Dict[str, str]]): The conversation history.
+        max_tokens (int): The maximum number of tokens in the response.
+        temperature (float): The randomness of the response.
+
+    Returns:
+        str: The generated response from the AI model.
+    """
+    user_input = messages[-1]['content']
     input_type = analyze_input(user_input)
     
     if input_type == "complex":
@@ -20,23 +45,24 @@ def generate_response(model_name, system_prompt, conversation, max_tokens, tempe
         system_prompt += f"\n\nFor complex queries, follow this thought process:\n{thought_process}"
     
     try:
-        # Ensure the conversation history alternates between user and assistant
-        cleaned_conversation = []
-        for i, message in enumerate(conversation):
-            if i % 2 == 0 and message['role'] != 'user':
-                continue
-            if i % 2 == 1 and message['role'] != 'assistant':
-                continue
-            cleaned_conversation.append(message)
-
         response = client.messages.create(
             model=model_name,
             max_tokens=max_tokens,
             temperature=temperature,
             system=system_prompt,
-            messages=cleaned_conversation
+            messages=messages
         )
-        return response
-    except Exception as e:
-        print(f"An error occurred in bot response: {str(e)}")
-        return None
+        return response.content[0].text
+    except (Anthropic.APIError, Anthropic.APIConnectionError) as e:
+        print(f"An API error occurred: {str(e)}")
+    except Anthropic.AuthenticationError:
+        print("Authentication error: Please check your API key.")
+    except Anthropic.RateLimitError:
+        print("Rate limit exceeded: Please try again later.")
+    except Anthropic.APIStatusError as e:
+        print(f"API status error: {str(e)}")
+    except KeyError:
+        print("Unexpected response format from the API.")
+    except ValueError:
+        print("Invalid value in the API response.")
+    return ""
