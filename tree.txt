@@ -1,0 +1,19 @@
+Agent99/
+├── .gitignore
+├── main.py
+├── chat99.py
+├── calibrate_threshold.py
+├── advanced_router.py
+├── memory_manager.py
+├── local_model_manager.py
+├── models.py
+├── config.py
+├── utils.py
+├── requirements.txt
+├── tree.txt
+├── README.md
+├── .env.template
+└── .github/  (if needed for GitHub-specific configurations)
+    ├── ISSUE_TEMPLATE/
+    ├── PULL_REQUEST_TEMPLATE.md
+    └── workflows/
