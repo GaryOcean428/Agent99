@@ -2,6 +2,8 @@
 
 Chat99 is an intelligent AI assistant with advanced memory, multi-model capabilities, and dynamic routing using RouteLLM.
 
+Chat99 is a pre-curser to the intended end goal of creating Agent99 and an agentic framework that dynamically routes between local/lower-end models for simpler or specific task execution while also dynamically assigning model parameters to achieve the best results for each specific task. 
+
 ## Features
 
 - Dynamic model selection using RouteLLM
