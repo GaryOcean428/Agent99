@@ -1,0 +1,25 @@
+# API interaction
+anthropic==0.31.2
+routellm[serve,eval]==0.1.0
+openai==1.5.0
+
+# Environment variable management
+python-dotenv==1.0.1
+
+# Console formatting and rich text
+rich==13.7.1
+
+# PyPI package distribution
+twine==5.1.1
+
+# Additional dependencies
+requests==2.31.0
+
+# For RouteLLM
+numpy
+pandas
+scikit-learn
+torch
+transformers
+datasets
+tiktoken
