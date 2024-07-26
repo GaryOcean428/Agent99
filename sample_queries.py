@@ -1,0 +1,42 @@
+[
+  {
+    "role": "user",
+    "content": "What is the capital of France?"
+  },
+  {
+    "role": "user",
+    "content": "Explain the theory of relativity in simple terms."
+  },
+  {
+    "role": "user",
+    "content": "Write a short story about a robot learning to love."
+  },
+  {
+    "role": "user",
+    "content": "What are the main causes of climate change?"
+  },
+  {
+    "role": "user",
+    "content": "How do I make a peanut butter and jelly sandwich?"
+  },
+  {
+    "role": "user",
+    "content": "Solve the quadratic equation: 2x^2 + 5x - 3 = 0"
+  },
+  {
+    "role": "user",
+    "content": "What are the key differences between Python and JavaScript?"
+  },
+  {
+    "role": "user",
+    "content": "Summarize the plot of Romeo and Juliet."
+  },
+  {
+    "role": "user",
+    "content": "How does photosynthesis work?"
+  },
+  {
+    "role": "user",
+    "content": "What are the main features of a blockchain?"
+  }
+]
