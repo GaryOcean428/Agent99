@@ -6,7 +6,7 @@ Chat99 is an intelligent AI assistant with advanced memory, multi-model capabili
 
 Chat99 is a pre-curser to the intended end goal of creating Agent99 and an agentic framework that dynamically routes between local/lower-end models for simpler or specific task execution while also assigning model parameters to achieve the best results for each specific task.
 
-Agent99 as a project name, is a loose call back to the 60's comedy show "Get Smart". Get Smart was and probably still is on re-runs every afternoon, and I'd watch it after school. And like many of you... Agent 99 was of particular interest. Although really, that wasn't part of why i named it that. It was jsut the first thing that popped into my head when I thought, "Agent... Agent... what?"
+Agent99, as a project name, is a loose call back to the 60's comedy show "Get Smart". Get Smart was and probably still is on re-runs every afternoon, and I'd watch it after school. And like many of you... Agent 99 was of particular interest. Although that wasn't part of why I named it that. It was the first thing that popped into my head when I thought, "Agent... Agent... what?"
 
 ## Features
 
