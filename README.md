@@ -16,6 +16,10 @@ Agent99 as a project name, is a loose call back to the 60's comedy show "Get Sma
 - Calibration tool for optimizing model selection thresholds
 - Local model support using Ollama
 
+### Dev notes
+
+- memory_manager.py is a temporary solution so that focus can be placed on other project areas. 
+
 ## Installation
 
 1. Clone the repository:
