@@ -3,31 +3,12 @@ Configuration settings for the Chat99 project.
 """
 
 import os
-from dotenv import load_dotenv
 
-# Default values
-DEFAULT_ROUTER = "mf"
-DEFAULT_THRESHOLD = 0.11593
-MAX_SHORT_TERM_MEMORY = 10
-LONG_TERM_MEMORY_EXPIRY_DAYS = 7
-DEBUG = False
-LOG_LEVEL = "INFO"
-
-# Model names
-HIGH_TIER_MODEL = "claude-3-5-sonnet-20240620"
-MID_TIER_MODEL = "llama-3.1-70b-versatile"
-LOW_TIER_MODEL = "llama-3.1-8b-instant"
-
-# API keys
-OPENAI_API_KEY = None
-ANTHROPIC_API_KEY = None
-ANYSCALE_API_KEY = None
-GROQ_API_KEY = None
-
-# Environment variables
-
-# Load environment variables
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("Warning: dotenv module not found. Make sure to set environment variables manually.")
 
 # API Keys
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
