@@ -1,37 +1,79 @@
 """
-Chat99 - An AI assistant powered by Claude models.
-This script implements a chat interface for interacting with the AI.
+chat99.py: Core functionality for Chat99 - An intelligent AI assistant with advanced memory and multi-model capabilities.
 """
 
 import os
 import argparse
-from typing import List, Dict, Any
-from models import get_model_info, get_model_list
+from typing import List, Dict, Tuple
+from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+from rich.markdown import Markdown
+from rich.prompt import Prompt
+from anthropic import Anthropic
+from groq import Groq
+from routellm.controller import Controller
 
-# Try to import required libraries, provide installation instructions if not found
-try:
-    from rich.console import Console
-    from rich.panel import Panel
-    from rich.markdown import Markdown
-    from rich.prompt import Prompt
-    from anthropic import Anthropic
-    import anthropic
-except ImportError:
-    print("Required libraries not found. Please install them using:")
-    print("pip install rich anthropic")
-    exit(1)
+# Load environment variables
+load_dotenv()
+
+# Import configuration
+from config import (
+    HIGH_TIER_MODEL,
+    MID_TIER_MODEL,
+    LOW_TIER_MODEL,
+    DEFAULT_ROUTER,
+    DEFAULT_THRESHOLD,
+    MAX_SHORT_TERM_MEMORY
+)
 
 # Set up Rich console
 console = Console()
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Chat99 (powered by Claude)")
-    parser.add_argument("--max-tokens", type=int, default=2000,
-                        help="Maximum tokens for response")
-    parser.add_argument("--temperature", type=float, default=0.7,
-                        help="Temperature for response generation")
+    parser = argparse.ArgumentParser(description="Chat99 - An intelligent AI assistant")
+    parser.add_argument("--use-dynamic-routing", action="store_true", help="Use dynamic routing")
+    parser.add_argument("--router", type=str, default=DEFAULT_ROUTER, help=f"Router to use (default: {DEFAULT_ROUTER})")
+    parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD, help=f"Routing threshold (default: {DEFAULT_THRESHOLD})")
     return parser.parse_args()
+
+def setup_routellm_controller() -> Controller:
+    """Set up and return a RouteLLM controller."""
+    return Controller(
+        routers=[DEFAULT_ROUTER],
+        strong_model=HIGH_TIER_MODEL,
+        weak_model=MID_TIER_MODEL,
+    )
+
+def generate_response(
+    controller: Controller,
+    conversation: List[Dict[str, str]],
+    router: str,
+    threshold: float
+) -> Tuple[str, str, str]:
+    """Generate a response using RouteLLM for routing."""
+    try:
+        response = controller.chat.completions.create(
+            model=f"router-{router}-{threshold}",
+            messages=conversation
+        )
+        model_used = response.model  # RouteLLM will update this to indicate which model was actually used
+        content = response.choices[0].message.content
+        return content, model_used, f"Routed using {router} router with threshold {threshold}"
+    except Exception as e:
+        console.print(f"[bold red]An error occurred: {str(e)}[/bold red]")
+        return None, None, None
+
+def determine_complexity(user_input: str) -> str:
+    """Determine the complexity of the user input to choose the appropriate model."""
+    # This is a simple heuristic and can be improved with more sophisticated NLP techniques
+    if len(user_input.split()) > 50 or "code" in user_input.lower() or "complex" in user_input.lower():
+        return "high"
+    elif len(user_input.split()) > 20:
+        return "mid"
+    else:
+        return "low"
 
 def display_message(role: str, content: str) -> None:
     """Display a message in the chat interface."""
@@ -41,127 +83,78 @@ def display_message(role: str, content: str) -> None:
         md = Markdown(content)
         console.print(Panel(md, expand=False, border_style="green", title="Chat99"))
 
-def generate_response(
-    client: Any,
-    model_name: str,
-    system_prompt: str,
-    conversation: List[Dict[str, str]],
-    max_tokens: int,
-    temperature: float
-) -> str:
-    """Generate a response from the AI model."""
-    try:
-        response = client.messages.create(
-            model=model_name,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_prompt,
-            messages=conversation
-        )
-        return response.content[0].text
-    except (anthropic.APIError, anthropic.APIConnectionError) as e:
-        console.print(f"[bold red]An API error occurred: {str(e)}[/bold red]")
-    except anthropic.AuthenticationError:
-        console.print("[bold red]Authentication error: Please check your API key.[/bold red]")
-    except anthropic.RateLimitError:
-        console.print("[bold red]Rate limit exceeded: Please try again later.[/bold red]")
-    except anthropic.APIStatusError as e:
-        console.print(f"[bold red]API status error: {str(e)}[/bold red]")
-    except KeyError:
-        console.print("[bold red]Unexpected response format from the API.[/bold red]")
-    except ValueError:
-        console.print("[bold red]Invalid value in the API response.[/bold red]")
-    return ""
-
 def chat_with_99(args: argparse.Namespace) -> None:
     """Main chat loop for interacting with the AI."""
-    console.print(Panel("Welcome to Chat99 (powered by Claude)!",
+    console.print(Panel("Welcome to Chat99 with Multi-Model Routing!",
                         title="Chat Interface", border_style="bold magenta"))
 
-    console.print("Available models:")
-    for key, model in get_model_list().items():
-        console.print(f"{key}. {model['name']}")
-
-    preferred_model = Prompt.ask("Enter the number of your preferred model",
-                                 choices=list(get_model_list().keys()))
-    model_info = get_model_info(preferred_model)
-
-    model_name = model_info['id']
-    chat99_version = f"Chat99 {model_info['name'].title()}"
-    console.print(f"[bold green]Using {chat99_version}[/bold green]")
-    console.print("Type 'exit' to end the conversation, 'switch' to change chat mode.")
-
-    general_prompt = (
-        f"You are Chat99, an AI assistant powered by Claude {model_info['name'].title()}. "
-        "You are helpful, honest, and harmless. You have extensive knowledge in various "
-        "fields and can engage in conversations on a wide range of topics. You provide "
-        "informative, concise, and friendly responses."
-    )
-
-    coding_prompt = (
-        f"You are Chat99, an AI assistant powered by Claude {model_info['name'].title()} "
-        "specializing in programming. You have extensive knowledge in software development. "
-        "When asked coding questions, you provide clear, efficient, and well-commented solutions. "
-        "You can work with multiple programming languages and explain complex concepts "
-        "in an easy-to-understand manner. Format your code responses with markdown code blocks "
-        "using triple backticks and the appropriate language identifier."
-    )
-
-    current_mode = "general"
-    system_prompt = general_prompt
+    if args.use_dynamic_routing:
+        console.print(f"[bold yellow]Dynamic routing enabled using {args.router} router with threshold {args.threshold}[/bold yellow]")
+    else:
+        console.print("[bold yellow]Using tiered model selection based on input complexity.[/bold yellow]")
+    console.print("Type 'exit' to end the conversation.")
 
     conversation: List[Dict[str, str]] = []
-    client = Anthropic()
+    controller = setup_routellm_controller()
+    anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
     while True:
         user_input = console.input("[bold blue]You:[/bold blue] ").strip()
 
         if user_input.lower() == 'exit':
-            console.print(f"[bold green]{chat99_version}:[/bold green] Goodbye! "
-                          "It was nice chatting with you.")
+            console.print("[bold green]Chat99:[/bold green] Goodbye! It was nice chatting with you.")
             break
-
-        if user_input.lower() == 'switch':
-            if current_mode == "general":
-                current_mode = "coding"
-                system_prompt = coding_prompt
-                console.print("[bold yellow]Switched to coding mode.[/bold yellow]")
-            else:
-                current_mode = "general"
-                system_prompt = general_prompt
-                console.print("[bold yellow]Switched to general chat mode.[/bold yellow]")
-            continue
 
         conversation.append({"role": "user", "content": user_input})
 
-        ai_response = generate_response(
-            client, model_name, system_prompt, conversation,
-            args.max_tokens, args.temperature
-        )
+        if args.use_dynamic_routing:
+            response, model_used, routing_explanation = generate_response(controller, conversation, args.router, args.threshold)
+        else:
+            complexity = determine_complexity(user_input)
+            if complexity == "high":
+                response = anthropic_client.messages.create(
+                    model=HIGH_TIER_MODEL,
+                    max_tokens=1024,
+                    messages=conversation
+                ).content[0].text
+                model_used = HIGH_TIER_MODEL
+            else:
+                groq_model = MID_TIER_MODEL if complexity == "mid" else LOW_TIER_MODEL
+                response = groq_client.chat.completions.create(
+                    model=groq_model,
+                    messages=conversation,
+                    max_tokens=1024
+                ).choices[0].message.content
+                model_used = groq_model
+            routing_explanation = f"Selected {model_used} based on input complexity: {complexity}"
 
-        if ai_response:
-            console.print(f"[bold green]{chat99_version}:[/bold green] ", end="")
-            console.print(ai_response)
+        if response:
+            console.print(f"[bold green]Chat99 ([italic]{model_used}[/italic]):[/bold green] ", end="")
+            console.print(response)
+            console.print(f"[bold yellow]Model Selection: {routing_explanation}[/bold yellow]")
 
-            conversation.append({"role": "assistant", "content": ai_response})
+            conversation.append({"role": "assistant", "content": response})
 
-            if len(conversation) > 10:
-                conversation = conversation[-10:]
+            if len(conversation) > MAX_SHORT_TERM_MEMORY:
+                conversation = conversation[-MAX_SHORT_TERM_MEMORY:]
 
-            display_message("assistant", ai_response)
+            display_message("assistant", response)
         else:
             console.print("[bold red]Failed to get a response. Please try again.[/bold red]")
 
-def check_api_key() -> bool:
-    """Check if the Anthropic API key is set."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        console.print("[bold red]Error: ANTHROPIC_API_KEY environment variable is not set.[/bold red]")
-        console.print("Please set your API key and try again.")
+def check_api_keys() -> bool:
+    """Check if the required API keys are set."""
+    required_keys = ["ANTHROPIC_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY"]
+    missing_keys = [key for key in required_keys if not os.getenv(key)]
+    
+    if missing_keys:
+        console.print(f"[bold red]Error: The following API keys are not set: {', '.join(missing_keys)}[/bold red]")
+        console.print("Please make sure your API keys are correctly set in the .env file.")
         return False
     return True
 
 if __name__ == "__main__":
-    if check_api_key():
+    if check_api_keys():
         chat_args = parse_arguments()
         chat_with_99(chat_args)
