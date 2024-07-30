@@ -1,38 +1,19 @@
 """
-LocalModelManager: Handles interactions with the local Llama model using Ollama.
+LocalModelManager: Handles interactions with local language models.
 """
 
-import requests
+from typing import List, Dict
+import os
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from config import LOCAL_MODEL_PATH
 
 class LocalModelManager:
-    def __init__(self, model_name="llama3.1:8b", api_base="http://localhost:11434"):
-        self.model_name = model_name
-        self.api_base = api_base
+    def __init__(self):
+        self.models = {}
+        self.tokenizers = {}
+        self._load_models()
 
-    def generate_response(self, prompt: str, max_tokens: int = 100, temperature: float = 0.7) -> str:
-        """Generate a response using the local Llama model."""
-        try:
-            response = requests.post(
-                f"{self.api_base}/api/generate",
-                json={
-                    "model": self.model_name,
-                    "prompt": prompt,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                }
-            )
-            response.raise_for_status()
-            return response.json()['response']
-        except requests.RequestException as e:
-            print(f"Error communicating with Ollama: {str(e)}")
-            return None
-
-    def is_available(self) -> bool:
-        """Check if the local model is available."""
-        try:
-            response = requests.get(f"{self.api_base}/api/tags")
-            return response.status_code == 200
-        except requests.RequestException:
-            return False
-
-local_model_manager = LocalModelManager()
+    def _load_models(self):
+        """Load local models from the specified directory."""
+        for model_name in os.listdir(LOCAL_MODEL_PATH):
+            model_path = os.path.join(LOCAL_MODEL_
