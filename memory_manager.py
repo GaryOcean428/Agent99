@@ -5,93 +5,98 @@ MemoryManager: Handles storage and retrieval of conversation context and user in
 from typing import Dict, List
 import re
 from datetime import datetime, timedelta
+from pymongo import MongoClient
+import redis
+from config import (
+    MONGODB_URI, MONGODB_DB_NAME, REDIS_HOST, REDIS_PORT, REDIS_DB,
+    MAX_SHORT_TERM_MEMORY, LONG_TERM_MEMORY_EXPIRY_DAYS
+)
 
 class MemoryManager:
-    """Manages the memory for the chat assistant."""
-
     def __init__(self):
-        """Initialize the MemoryManager with an empty memory dictionary."""
-        self.memory: Dict[str, Dict[str, any]] = {}
-        self.short_term_memory: List[Dict[str, str]] = []
+        self.mongo_client = MongoClient(MONGODB_URI)
+        self.db = self.mongo_client[MONGODB_DB_NAME]
+        self.long_term_memory = self.db.long_term_memory
+
+        self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+        self.short_term_memory = []
 
     def add_to_short_term(self, message: Dict[str, str]):
-        """
-        Add a message to the short-term memory.
-
-        Args:
-            message (Dict[str, str]): The message to add to short-term memory.
-        """
+        """Add a message to short-term memory."""
         self.short_term_memory.append(message)
-        if len(self.short_term_memory) > 10:
+        if len(self.short_term_memory) > MAX_SHORT_TERM_MEMORY:
             self.short_term_memory.pop(0)
 
     def update_memory(self, user_input: str, response: str):
-        """
-        Update the memory with key information from the conversation.
+        """Update both short-term and long-term memory."""
+        self.add_to_short_term({"role": "user", "content": user_input})
+        self.add_to_short_term({"role": "assistant", "content": response})
 
-        Args:
-            user_input (str): The user's input message.
-            response (str): The assistant's response message.
-        """
         key_words = self._extract_key_words(user_input)
         for word in key_words:
-            self.memory[word] = {
-                'context': response[:100],  # Store first 100 characters of response
-                'timestamp': datetime.now(),
-                'relevance': 1.0
-            }
+            self.long_term_memory.update_one(
+                {"keyword": word},
+                {"$set": {
+                    "context": response[:100],
+                    "timestamp": datetime.now(),
+                    "relevance": 1.0
+                }},
+                upsert=True
+            )
 
     def get_relevant_context(self, user_input: str) -> str:
-        """
-        Retrieve relevant context based on the user's input.
-
-        Args:
-            user_input (str): The user's input message.
-
-        Returns:
-            str: Relevant context from memory.
-        """
+        """Retrieve relevant context from both short-term and long-term memory."""
         relevant_info = []
         key_words = self._extract_key_words(user_input)
+
+        # Check short-term memory
+        for message in reversed(self.short_term_memory):
+            if any(word in message["content"].lower() for word in key_words):
+                relevant_info.append(message["content"])
+
+        # Check long-term memory
         for word in key_words:
-            if word in self.memory:
-                info = self.memory[word]
-                relevant_info.append(f"{word}: {info['context']}")
+            memory = self.long_term_memory.find_one({"keyword": word})
+            if memory:
+                relevant_info.append(f"{word}: {memory['context']}")
                 self._update_relevance(word)
+
         return ". ".join(relevant_info)
 
-    def is_relevant(self, content: str) -> bool:
-        """
-        Check if the given content is relevant based on the current memory.
-
-        Args:
-            content (str): The content to check for relevance.
-
-        Returns:
-            bool: True if the content is relevant, False otherwise.
-        """
-        key_words = self._extract_key_words(content)
-        return any(word in self.memory and self.memory[word]['relevance'] > 0.5 for word in key_words)
+    def determine_complexity(self, user_input: str) -> str:
+        """Determine the complexity of the query."""
+        word_count = len(user_input.split())
+        if word_count > 50 or any(word in user_input.lower() for word in ["complex", "difficult", "advanced"]):
+            return "high"
+        elif word_count > 20:
+            return "mid"
+        else:
+            return "low"
 
     def _extract_key_words(self, text: str) -> List[str]:
         """Extract key words from the given text."""
-        # This is a simple implementation. Consider using NLP techniques for better extraction.
         words = re.findall(r'\b\w{4,}\b', text.lower())
         return list(set(words))  # Remove duplicates
 
     def _update_relevance(self, word: str):
-        """Update the relevance score of a word in memory."""
-        if word in self.memory:
-            time_diff = datetime.now() - self.memory[word]['timestamp']
-            # Decrease relevance over time, but not below 0.1
-            self.memory[word]['relevance'] = max(0.1, 1.0 - (time_diff.total_seconds() / (24 * 3600)))
+        """Update the relevance score of a word in long-term memory."""
+        memory = self.long_term_memory.find_one({"keyword": word})
+        if memory:
+            time_diff = datetime.now() - memory['timestamp']
+            new_relevance = max(0.1, 1.0 - (time_diff.total_seconds() / (LONG_TERM_MEMORY_EXPIRY_DAYS * 24 * 3600)))
+            self.long_term_memory.update_one(
+                {"keyword": word},
+                {"$set": {"relevance": new_relevance}}
+            )
 
     def cleanup_memory(self):
-        """Remove old and irrelevant entries from memory."""
-        current_time = datetime.now()
-        self.memory = {
-            word: info for word, info in self.memory.items()
-            if current_time - info['timestamp'] <= timedelta(days=7) or info['relevance'] > 0.3
-        }
+        """Remove old and irrelevant entries from long-term memory."""
+        expiry_date = datetime.now() - timedelta(days=LONG_TERM_MEMORY_EXPIRY_DAYS)
+        self.long_term_memory.delete_many({
+            "$or": [
+                {"timestamp": {"$lt": expiry_date}},
+                {"relevance": {"$lt": 0.1}}
+            ]
+        })
 
 memory_manager = MemoryManager()
