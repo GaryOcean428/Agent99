@@ -2,10 +2,7 @@
 anthropic==0.31.2
 routellm[serve,eval]==0.1.0
 openai==1.5.0
-<<<<<<< HEAD
-groq==0.9.0  # Add Groq client library
-=======
->>>>>>> origin/master
+groq==0.9.0
 
 # Environment variable management
 python-dotenv==1.0.1
@@ -26,8 +23,4 @@ scikit-learn
 torch
 transformers
 datasets
-<<<<<<< HEAD
 tiktoken
-=======
-tiktoken
->>>>>>> origin/master
