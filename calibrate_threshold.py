@@ -2,51 +2,14 @@
 Calibration script to find the optimal threshold for RouteLLM in Chat99.
 """
 
-import sys
-import os
-print(f"Python version: {sys.version}")
-print(f"Python path: {sys.executable}")
-print(f"Sys path: {sys.path}")
-print(f"Current working directory: {os.getcwd()}")
-
 import argparse
 import json
 from typing import List, Dict
 
-try:
-    import routellm
-    print(f"RouteLLM is installed at: {routellm.__file__}")
-    print(f"RouteLLM contents: {dir(routellm)}")
-    
-    # Print the contents of the routellm package directory
-    routellm_dir = os.path.dirname(routellm.__file__)
-    print(f"Contents of {routellm_dir}:")
-    for item in os.listdir(routellm_dir):
-        print(f"  {item}")
-    
-    # Import Controller and calibrate_threshold
-    from routellm.routers.routers import ROUTER_CLS
-    Controller = ROUTER_CLS['base']
-    print("Imported Controller from routellm.routers.routers")
+from routellm.controller import Controller
+from routellm.calibrate_threshold import calibrate_threshold
 
-    from routellm.calibrate_threshold import calibrate_threshold
-    print("Imported calibrate_threshold from routellm.calibrate_threshold")
-
-except ImportError as e:
-    print(f"Error importing RouteLLM modules: {e}")
-    print("Please ensure RouteLLM is installed correctly")
-    sys.exit(1)
-
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Ensure OpenAI API key is set
-if 'OPENAI_API_KEY' not in os.environ:
-    print("Error: OPENAI_API_KEY environment variable is not set.")
-    print("Please set it in your .env file or export it in your shell.")
-    sys.exit(1)
+from config import HIGH_TIER_MODEL, MID_TIER_MODEL
 
 def load_sample_queries(file_path: str) -> List[Dict[str, str]]:
     """Load sample queries from a JSON file."""
@@ -71,8 +34,8 @@ def main():
     # Set up RouteLLM controller
     controller = Controller(
         routers=[args.router],
-        strong_model="claude-3-5-sonnet-20240620",
-        weak_model="anyscale/mistralai/Mixtral-8x7B-Instruct-v0.1",
+        strong_model=HIGH_TIER_MODEL,
+        weak_model=MID_TIER_MODEL,
     )
 
     # Calibrate threshold
