@@ -41,7 +41,3 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 <<<<<<< HEAD
 # Groq Settings
 GROQ_API_BASE = "https://api.groq.com/openai/v1"
-=======
-# Ollama Settings
-OLLAMA_API_BASE = "http://localhost:11434"
->>>>>>> origin/master
