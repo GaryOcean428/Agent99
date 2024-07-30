@@ -103,8 +103,6 @@ class AdvancedRouter:
             'model': self.models['4']['id'],  # Claude 3 Haiku
             'max_tokens': 250,
             'temperature': 0.5,
-            'top_p': 0.95,
-            'system_message': self._get_system_message(task_type, 'low')
         }
 
     def _get_mid_tier_config(self, task_type: str) -> Dict[str, Any]:
@@ -115,8 +113,6 @@ class AdvancedRouter:
             'model': self.models['3']['id'],  # Claude 3 Sonnet
             'max_tokens': 1000,
             'temperature': 0.7,
-            'top_p': 0.95,
-            'system_message': self._get_system_message(task_type, 'mid')
         }
 
     def _get_high_tier_config(self, task_type: str) -> Dict[str, Any]:
@@ -127,30 +123,6 @@ class AdvancedRouter:
             'model': self.models['1']['id'],  # Claude 3.5 Sonnet
             'max_tokens': 2000,
             'temperature': 0.9,
-            'top_p': 1.0,
-            'system_message': self._get_system_message(task_type, 'high')
         }
-
-    def _get_system_message(self, task_type: str, tier: str) -> str:
-        """
-        Get an appropriate system message based on the task type and model tier.
-        """
-        base_message = "You are an AI assistant. "
-        
-        if task_type == 'coding':
-            base_message += "Provide clear, efficient, and well-commented code solutions. "
-        elif task_type == 'analysis':
-            base_message += "Offer detailed analysis and evaluation of the given topic. "
-        elif task_type == 'creative':
-            base_message += "Be creative and innovative in your responses. "
-        elif task_type == 'arithmetic':
-            base_message += "Provide quick and accurate arithmetic calculations. "
-        
-        if tier == 'local':
-            base_message += "Focus on providing concise and direct answers. "
-        elif tier == 'high':
-            base_message += "Utilize your full capabilities to provide comprehensive and nuanced responses. "
-        
-        return base_message
 
 advanced_router = AdvancedRouter()
