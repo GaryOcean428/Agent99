@@ -1,5 +1,5 @@
 """
-main.py: Main entry point for the Chat99 application.
+Main entry point for the Chat99 application.
 """
 
 import argparse

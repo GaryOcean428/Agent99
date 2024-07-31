@@ -3,39 +3,36 @@ chat99.py: Core functionality for Chat99 - An intelligent AI assistant with adva
 and multi-model capabilities.
 """
 
-import os
 import argparse
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
-# Import required libraries with error handling
-try:
-    from dotenv import load_dotenv
-    from rich.console import Console
-    from rich.panel import Panel
-    from rich.markdown import Markdown
-    from anthropic import Anthropic
-    from groq import Groq
-    from routellm.controller import Controller
-    from config import (
-        HIGH_TIER_MODEL, MID_TIER_MODEL, LOW_TIER_MODEL,
-        DEFAULT_ROUTER, DEFAULT_THRESHOLD, MAX_SHORT_TERM_MEMORY
-    )
-except ImportError as e:
-    print(f"Error importing required libraries: {e}")
-    print("Please make sure all required libraries are installed.")
-    exit(1)
+from rich.console import Console
+from rich.panel import Panel
+from rich.markdown import Markdown
+from anthropic import Anthropic
+from groq import Groq
 
-# Load environment variables
-load_dotenv()
+# Import our custom RouteLLM configuration
+import custom_routellm_config
 
-# Set up Rich console
+import routellm
+
+from config import (
+    HIGH_TIER_MODEL, MID_TIER_MODEL, LOW_TIER_MODEL,
+    DEFAULT_ROUTER, DEFAULT_THRESHOLD, MAX_SHORT_TERM_MEMORY,
+    STRONG_MODEL, WEAK_MODEL, ANTHROPIC_API_KEY, GROQ_API_KEY
+)
+from memory_manager import MemoryManager
+from utils import setup_logging
+
 console = Console()
+memory_manager = MemoryManager()
 
 def generate_response(model: str, conversation: List[Dict[str, str]], max_tokens: int = 1024) -> str:
     """Generate a response using the specified model."""
     try:
         if model == HIGH_TIER_MODEL:
-            client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            client = Anthropic(api_key=ANTHROPIC_API_KEY)
             response = client.messages.create(
                 model=model,
                 max_tokens=max_tokens,
@@ -43,7 +40,7 @@ def generate_response(model: str, conversation: List[Dict[str, str]], max_tokens
             )
             return response.content[0].text
         elif model in [MID_TIER_MODEL, LOW_TIER_MODEL]:
-            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+            client = Groq(api_key=GROQ_API_KEY)
             response = client.chat.completions.create(
                 model=model,
                 messages=conversation,
@@ -52,7 +49,7 @@ def generate_response(model: str, conversation: List[Dict[str, str]], max_tokens
             return response.choices[0].message.content
         else:
             return "Error: Invalid model specified"
-    except (Anthropic.APIError, Groq.APIError) as e:
+    except Exception as e:
         console.print(f"[bold red]API Error: {str(e)}[/bold red]")
         return ""
 
@@ -72,16 +69,15 @@ def chat_with_99(args: argparse.Namespace) -> None:
     if args.use_dynamic_routing:
         console.print(f"[bold yellow]Dynamic routing enabled using {args.router} router "
                       f"with threshold {args.threshold}[/bold yellow]")
+        controller = routellm.Controller(
+            routers=[args.router],
+            strong_model=STRONG_MODEL,
+            weak_model=WEAK_MODEL,
+        )
     else:
         console.print("[bold yellow]Using tiered model selection based on input complexity.[/bold yellow]")
-    console.print("Type 'exit' to end the conversation.")
 
     conversation: List[Dict[str, str]] = []
-    controller = Controller(
-        routers=[DEFAULT_ROUTER],
-        strong_model=HIGH_TIER_MODEL,
-        weak_model=MID_TIER_MODEL,
-    )
 
     while True:
         user_input = console.input("[bold blue]You:[/bold blue] ").strip()
@@ -114,6 +110,7 @@ def chat_with_99(args: argparse.Namespace) -> None:
                 console.print(f"[bold yellow]Model Selection: {routing_explanation}[/bold yellow]")
 
                 conversation.append({"role": "assistant", "content": content})
+                memory_manager.update_memory(user_input, content)
 
                 if len(conversation) > MAX_SHORT_TERM_MEMORY:
                     conversation = conversation[-MAX_SHORT_TERM_MEMORY:]
@@ -124,24 +121,13 @@ def chat_with_99(args: argparse.Namespace) -> None:
         except Exception as e:
             console.print(f"[bold red]An error occurred: {str(e)}[/bold red]")
 
-def check_api_keys() -> bool:
-    """Check if the required API keys are set."""
-    required_keys = ["ANTHROPIC_API_KEY", "GROQ_API_KEY"]
-    missing_keys = [key for key in required_keys if not os.getenv(key)]
-    
-    if missing_keys:
-        console.print(f"[bold red]Error: The following API keys are not set: {', '.join(missing_keys)}[/bold red]")
-        console.print("Please make sure your API keys are correctly set in the .env file.")
-        return False
-    return True
-
 if __name__ == "__main__":
-    if check_api_keys():
-        parser = argparse.ArgumentParser(description="Chat99 - An intelligent AI assistant")
-        parser.add_argument("--use-dynamic-routing", action="store_true", help="Use dynamic routing")
-        parser.add_argument("--router", type=str, default=DEFAULT_ROUTER,
-                            help=f"Router to use (default: {DEFAULT_ROUTER})")
-        parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD,
-                            help=f"Routing threshold (default: {DEFAULT_THRESHOLD})")
-        chat_args = parser.parse_args()
-        chat_with_99(chat_args)
+    setup_logging()
+    parser = argparse.ArgumentParser(description="Chat99 - An intelligent AI assistant")
+    parser.add_argument("--use-dynamic-routing", action="store_true", help="Use dynamic routing")
+    parser.add_argument("--router", type=str, default=DEFAULT_ROUTER,
+                        help=f"Router to use (default: {DEFAULT_ROUTER})")
+    parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD,
+                        help=f"Routing threshold (default: {DEFAULT_THRESHOLD})")
+    chat_args = parser.parse_args()
+    chat_with_99(chat_args)

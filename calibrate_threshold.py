@@ -6,10 +6,13 @@ import argparse
 import json
 from typing import List, Dict
 
-from routellm.controller import Controller
-from routellm.calibrate_threshold import calibrate_threshold
+# Import our custom RouteLLM configuration
+import custom_routellm_config
 
-from config import HIGH_TIER_MODEL, MID_TIER_MODEL
+import routellm
+from routellm.calibrate_threshold import calibrate_threshold as routellm_calibrate
+
+from config import STRONG_MODEL, WEAK_MODEL
 
 def load_sample_queries(file_path: str) -> List[Dict[str, str]]:
     """Load sample queries from a JSON file."""
@@ -32,14 +35,14 @@ def main():
     sample_queries = load_sample_queries(args.sample_queries)
 
     # Set up RouteLLM controller
-    controller = Controller(
+    controller = routellm.Controller(
         routers=[args.router],
-        strong_model=HIGH_TIER_MODEL,
-        weak_model=MID_TIER_MODEL,
+        strong_model=STRONG_MODEL,
+        weak_model=WEAK_MODEL,
     )
 
     # Calibrate threshold
-    threshold = calibrate_threshold(
+    threshold = routellm_calibrate(
         controller=controller,
         router=args.router,
         prompts=[query['content'] for query in sample_queries],
