@@ -5,11 +5,13 @@ AdvancedRouter: Dynamically selects the best model and parameters for a given qu
 from typing import Dict, Any
 import re
 from models import get_model_list
+from config import ROUTER_THRESHOLD, HIGH_TIER_MODEL, MID_TIER_MODEL, LOW_TIER_MODEL
 
 class AdvancedRouter:
     def __init__(self):
         self.models = get_model_list()
         self.local_model = "llama3.1:8b"
+        self.threshold = ROUTER_THRESHOLD
 
     def route(self, query: str, conversation_history: list) -> Dict[str, Any]:
         """
@@ -19,47 +21,33 @@ class AdvancedRouter:
         context_length = self._calculate_context_length(conversation_history)
         task_type = self._identify_task_type(query)
 
-        if complexity < 0.1 and context_length < 100:
-            config = self._get_local_config(task_type)
-            config['routing_explanation'] = f"Using local model due to very low complexity ({complexity:.2f}) and short context ({context_length} chars)."
-            return config
-        elif complexity < 0.3 and context_length < 1000:
+        if complexity < self.threshold / 2 and context_length < 1000:
             config = self._get_low_tier_config(task_type)
-            config['routing_explanation'] = f"Using low-tier model due to low complexity ({complexity:.2f}) and short context ({context_length} chars)."
-            return config
-        elif complexity < 0.7 and context_length < 4000:
+        elif complexity < self.threshold and context_length < 4000:
             config = self._get_mid_tier_config(task_type)
-            config['routing_explanation'] = f"Using mid-tier model due to moderate complexity ({complexity:.2f}) and medium context ({context_length} chars)."
-            return config
         else:
             config = self._get_high_tier_config(task_type)
-            config['routing_explanation'] = f"Using high-tier model due to high complexity ({complexity:.2f}) or long context ({context_length} chars)."
-            return config
+
+        config['routing_explanation'] = f"Selected {config['model']} based on complexity ({complexity:.2f}) and context length ({context_length} chars). Threshold: {self.threshold}"
+        return config
+
+    def determine_complexity(self, query: str) -> str:
+        """Determine the complexity of the query on a scale of high, mid, low."""
+        complexity_score = self._assess_complexity(query)
+        if complexity_score < 0.3:
+            return "low"
+        elif complexity_score < 0.7:
+            return "mid"
+        else:
+            return "high"
 
     def _assess_complexity(self, query: str) -> float:
         """
         Assess the complexity of the query on a scale of 0 to 1.
         """
-        # Improved heuristics for complexity assessment
-        complexity_indicators = [
-            r'\b(explain|analyze|compare|contrast|evaluate|synthesize)\b',
-            r'\b(code|program|algorithm|function)\b',
-            r'\b(scientific|technical|academic)\b',
-            r'\b(why|how|what if)\b',
-            r'\b(\w+\s+){5,}',  # Checks if query has more than 5 words
-        ]
-        simple_indicators = [
-            r'^\s*\d+\s*[\+\-\*/]\s*\d+\s*$',  # Simple arithmetic
-            r'^\s*what\s+is\s+\d+\s*[\+\-\*/]\s*\d+\s*$',  # "What is" followed by simple arithmetic
-            r'^\s*hi|hello|hey\s*$',  # Simple greetings
-        ]
-        
-        for indicator in simple_indicators:
-            if re.search(indicator, query, re.IGNORECASE):
-                return 0.0  # Very simple query
-        
-        complexity_score = sum(bool(re.search(indicator, query, re.IGNORECASE)) for indicator in complexity_indicators)
-        return min(complexity_score / len(complexity_indicators), 1.0)
+        # Implement complexity assessment logic here
+        # This is a placeholder implementation
+        return len(query) / 1000  # Simplified complexity measure
 
     def _calculate_context_length(self, conversation_history: list) -> int:
         """
@@ -71,37 +59,17 @@ class AdvancedRouter:
         """
         Identify the type of task based on the query.
         """
-        if re.search(r'\b(code|program|function|algorithm)\b', query, re.IGNORECASE):
-            return 'coding'
-        elif re.search(r'\b(analyze|evaluate|compare|contrast)\b', query, re.IGNORECASE):
-            return 'analysis'
-        elif re.search(r'\b(creative|write|compose|design)\b', query, re.IGNORECASE):
-            return 'creative'
-        elif re.search(r'^\s*\d+\s*[\+\-\*/]\s*\d+\s*$', query):
-            return 'arithmetic'
-        else:
-            return 'general'
-
-    def _get_local_config(self, task_type: str) -> Dict[str, Any]:
-        """
-        Get configuration for local model processing.
-        """
-        return {
-            'model': self.local_model,
-            'max_tokens': 100,
-            'temperature': 0.2,
-            'top_p': 0.9,
-            'system_message': self._get_system_message(task_type, 'local'),
-            'use_local_model': True
-        }
+        # Implement task type identification logic here
+        # This is a placeholder implementation
+        return "general"
 
     def _get_low_tier_config(self, task_type: str) -> Dict[str, Any]:
         """
         Get configuration for low-tier model processing.
         """
         return {
-            'model': self.models['4']['id'],  # Claude 3 Haiku
-            'max_tokens': 250,
+            'model': LOW_TIER_MODEL,
+            'max_tokens': 256,
             'temperature': 0.5,
         }
 
@@ -110,8 +78,8 @@ class AdvancedRouter:
         Get configuration for mid-tier model processing.
         """
         return {
-            'model': self.models['3']['id'],  # Claude 3 Sonnet
-            'max_tokens': 1000,
+            'model': MID_TIER_MODEL,
+            'max_tokens': 512,
             'temperature': 0.7,
         }
 
@@ -120,8 +88,8 @@ class AdvancedRouter:
         Get configuration for high-tier model processing.
         """
         return {
-            'model': self.models['1']['id'],  # Claude 3.5 Sonnet
-            'max_tokens': 2000,
+            'model': HIGH_TIER_MODEL,
+            'max_tokens': 1024,
             'temperature': 0.9,
         }
 
