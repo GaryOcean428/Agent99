@@ -67,7 +67,7 @@ def chat_with_99(args: argparse.Namespace) -> None:
         user_input = console.input("[bold blue]You:[/bold blue] ").strip()
 
         if user_input.lower() == 'exit':
-            console.print("[bold green]Chat99:[/bold green] Goodbye! It was nice chatting with you. can you bring your mums number next time?")
+            console.print("[bold green]Chat99:[/bold green] Goodbye! It was nice chatting with you. Can you bring your mums number next time?")
             break
 
         conversation.append({"role": "user", "content": user_input})
