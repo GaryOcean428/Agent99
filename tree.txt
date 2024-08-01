@@ -1,18 +1,38 @@
 Agent99/
+chat99
+├── .env
 ├── .gitignore
+├── README.md
+├── requirements.txt
+├── config.yaml
 ├── main.py
 ├── chat99.py
-├── calibrate_threshold.py
+├── config.py
 ├── advanced_router.py
 ├── memory_manager.py
 ├── local_model_manager.py
-├── models.py
-├── config.py
+├── groq_model_manager.py
+├── response_generator.py
 ├── utils.py
-├── requirements.txt
-├── tree.txt
-├── README.md
-├── .env.template
+├── calibrate_threshold.py
+├── sample_queries.json
+├── models/
+│   └── local_models/
+│       ├── model1/
+│       └── model2/
+├── data/
+│   └── conversation_history/
+├── logs/
+│   └── app.log
+├── tests/
+│   ├── test_chat99.py
+│   ├── test_advanced_router.py
+│   ├── test_memory_manager.py
+│   ├── test_local_model_manager.py
+│   └── test_response_generator.py
+└── docs/
+    ├── setup_guide.md
+    └── api_documentation.md
 └── .github/  (if needed for GitHub-specific configurations)
     ├── ISSUE_TEMPLATE/
     ├── PULL_REQUEST_TEMPLATE.md
