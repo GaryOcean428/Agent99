@@ -14,11 +14,13 @@ from config import (
 
 class MemoryManager:
     def __init__(self):
+        # MongoDB connection
         self.mongo_client = MongoClient(MONGODB_URI)
         self.db = self.mongo_client[MONGODB_DB_NAME]
         self.long_term_memory = self.db.long_term_memory
 
-        self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+        # Redis connection
+        self.redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
         self.short_term_memory = []
 
     def add_to_short_term(self, message: Dict[str, str]):
@@ -44,6 +46,9 @@ class MemoryManager:
                 upsert=True
             )
 
+        # Cache the last response in Redis
+        self.redis_client.setex(f"{user_input}_last_response", 3600, response)
+
     def get_relevant_context(self, user_input: str) -> str:
         """Retrieve relevant context from both short-term and long-term memory."""
         relevant_info = []
@@ -62,6 +67,13 @@ class MemoryManager:
                 self._update_relevance(word)
 
         return ". ".join(relevant_info)
+
+    def get_cached_response(self, user_input: str) -> str:
+        """Retrieve the cached response for the given user input from Redis."""
+        cached_response = self.redis_client.get(f"{user_input}_last_response")
+        if cached_response:
+            return cached_response.decode('utf-8')
+        return ""
 
     def determine_complexity(self, user_input: str) -> str:
         """Determine the complexity of the query."""
