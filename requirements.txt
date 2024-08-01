@@ -28,4 +28,5 @@ tiktoken
 # For memory
 pymongo==3.12.1
 pymongo[srv]==3.12.1
-redis-5.0.8
+nltk
+redis
