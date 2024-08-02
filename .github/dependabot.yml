@@ -5,15 +5,22 @@
 
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: "pip" # Ecosystem for Python packages
+    directory: "/" # Location of package manifests (root directory)
     schedule:
-      interval: "weekly"
-  - package-ecosystem: npm
-    directory: "/javascript"
+      interval: "daily" # Check for updates daily
+
+  - package-ecosystem: "github-actions" # Ecosystem for GitHub Actions
+    directory: "/" # Location of workflows (root directory)
     schedule:
-      interval: "weekly"
-  - package-ecosystem: bundler
-    directory: "/ruby"
+      interval: "daily" # Check for updates daily
+
+  - package-ecosystem: "docker" # Ecosystem for Docker dependencies
+    directory: "/" # Location of Dockerfiles (root directory)
     schedule:
-      interval: "weekly"
+      interval: "daily" # Check for updates daily
+
+  - package-ecosystem: "npm" # Ecosystem for JavaScript packages
+    directory: "/" # Location of package.json (root directory)
+    schedule:
+      interval: "daily" # Check for updates daily
