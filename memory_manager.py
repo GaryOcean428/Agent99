@@ -117,26 +117,28 @@ class MemoryManager:
             self.short_term_memory.pop(0)
 
     def search_memories(self, query: str) -> List[Dict]:
-    if not self.mongo_collection or not self.vectorizer:
-        return []
-
-    try:
-        all_memories = list(self.mongo_collection.find().sort("timestamp", -1).limit(100))
-
-        if not all_memories:
+        if not self.mongo_collection or not self.vectorizer:
             return []
-
-        memory_texts = [f"{m.get('topic', '')} {m.get('summary', '')}" for m in all_memories]
-        query_vector = self.vectorizer.transform([query])
-        memory_vectors = self.vectorizer.transform(memory_texts)
-
-        similarities = cosine_similarity(query_vector, memory_vectors).flatten()
-        top_indices = similarities.argsort()[-5:][::-1]  # Get top 5 most relevant memories
-
-        return [all_memories[i] for i in top_indices]
-    except Exception as e:
-        logger.error(f"Error searching memories: {str(e)}")
-        return []
+    
+        try:
+            all_memories = list(self.mongo_collection.find().sort("timestamp", -1).limit(100))
+    
+            if not all_memories:
+                return []
+    
+            memory_texts = [f"{m.get('topic', '')} {m.get('summary', '')}" for m in all_memories]
+            query_vector = self.vectorizer.transform([query])
+            memory_vectors = self.vectorizer.transform(memory_texts)
+    
+            similarities = cosine_similarity(query_vector, memory_vectors).flatten()
+            top_indices = similarities.argsort()[-5:][::-1]  # Get top 5 most relevant memories
+    
+            return [all_memories[i] for i in top_indices]
+        import logging
+        
+        except Exception as e:
+            logging.error(f"Error searching memories: {str(e)}")
+            return []
 
     def update_memory(self, user_input: str, response: str):
         """Update both short-term and long-term memory with new interaction."""
