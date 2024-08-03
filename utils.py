@@ -1,22 +1,43 @@
-"""
-Utility functions for the Chat99 project.
-"""
-
 import logging
-from config import LOG_LEVEL, DEBUG
+from logging.handlers import RotatingFileHandler
+from datetime import datetime
+import os
 
-def setup_logging():
-    """Set up logging for the project."""
-    logging.basicConfig(
-        level=LOG_LEVEL,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+
+def setup_logging(script_filename, profile_name, user_name):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    log_dir = os.path.join(base_dir, "../logs")
+
+    os.makedirs(log_dir, exist_ok=True)
+    log_filename = os.path.join(
+        log_dir, f"{datetime.now().strftime('%Y-%m-%d')}_{profile_name}_{user_name}.log"
     )
-    if DEBUG:
-        logging.getLogger().setLevel(logging.DEBUG)
 
-def truncate_text(text: str, max_length: int = 100) -> str:
-    """Truncate text to a maximum length."""
-    return text[:max_length] + "..." if len(text) > max_length else text
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
-# Add more utility functions as needed
+    formatter = logging.Formatter(
+        f"%(asctime)s.%(msecs)03d - {script_filename} - {profile_name} - {user_name} - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # Clear existing handlers
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    file_handler = RotatingFileHandler(
+        filename=log_filename,
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.WARNING)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    return logger

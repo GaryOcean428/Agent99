@@ -9,12 +9,13 @@ from input_analyzer import analyze_input
 
 client = Anthropic()
 
+
 def generate_response(
     model_name: str,
     system_prompt: str,
     messages: List[Dict[str, str]],
     max_tokens: int,
-    temperature: float
+    temperature: float,
 ) -> str:
     """
     Generate a response from the AI model using the Anthropic API.
@@ -29,9 +30,9 @@ def generate_response(
     Returns:
         str: The generated response from the AI model.
     """
-    user_input = messages[-1]['content']
+    user_input = messages[-1]["content"]
     input_type = analyze_input(user_input)
-    
+
     if input_type == "complex":
         thought_process = """
         1. Understand the question or task
@@ -41,16 +42,18 @@ def generate_response(
         5. Draw conclusions or provide a step-by-step explanation
         6. Summarize the response
         """
-        
-        system_prompt += f"\n\nFor complex queries, follow this thought process:\n{thought_process}"
-    
+
+        system_prompt += (
+            f"\n\nFor complex queries, follow this thought process:\n{thought_process}"
+        )
+
     try:
         response = client.messages.create(
             model=model_name,
             max_tokens=max_tokens,
             temperature=temperature,
             system=system_prompt,
-            messages=messages
+            messages=messages,
         )
         return response.content[0].text
     except (Anthropic.APIError, Anthropic.APIConnectionError) as e:

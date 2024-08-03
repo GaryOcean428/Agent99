@@ -1,5 +1,6 @@
 import os
 import argparse
+import logging
 from typing import List, Dict
 import time
 
@@ -18,6 +19,7 @@ from memory_manager import MemoryManager
 
 load_dotenv()
 console = Console()
+logger = logging.getLogger()
 
 try:
     memory_manager = MemoryManager()
@@ -59,8 +61,10 @@ def generate_response_with_timeout(
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future = executor.submit(generate)
         try:
-            return future.result(timeout=timeout)
+            result = future.result(timeout=timeout)
+            return result
         except concurrent.futures.TimeoutError:
+            logger.error("Error: Response generation timed out")
             return "Error: Response generation timed out"
 
 
@@ -96,6 +100,8 @@ def generate_response(
             f"[bold cyan]Response time: {end_time - start_time:.2f} seconds[/bold cyan]"
         )
 
+        logger.info(f"Generated response: {raw_response}")
+
         if raw_response.startswith("Error:"):
             console.print(f"[bold red]{raw_response}[/bold red]")
             return "I apologize, but I'm having trouble generating a response right now. Could you please try again?"
@@ -107,8 +113,10 @@ def generate_response(
 
     except requests.exceptions.RequestException as e:
         console.print(f"[bold red]Network error: {str(e)}[/bold red]")
+        logger.error(f"Network error: {str(e)}")
     except Exception as e:
         console.print(f"[bold red]An unexpected error occurred: {str(e)}[/bold red]")
+        logger.error(f"An unexpected error occurred: {str(e)}")
 
     return "I'm sorry, but I encountered an error while processing your request. Could you please try again?"
 
@@ -176,12 +184,14 @@ def chat_with_99(args: argparse.Namespace) -> None:
                 conversation.append({"role": "assistant", "content": content})
 
                 display_message("assistant", content)
+
             else:
                 console.print(
                     "[bold red]Failed to get a response. Please try again.[/bold red]"
                 )
         except Exception as e:
             console.print(f"[bold red]An error occurred: {str(e)}[/bold red]")
+            logger.error(f"An error occurred: {str(e)}")
 
 
 def display_message(role: str, content: str) -> None:

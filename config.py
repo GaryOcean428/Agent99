@@ -1,16 +1,10 @@
-# config.py
-
 import os
 import json
+import subprocess
+from dotenv import load_dotenv
 
-try:
-    from dotenv import load_dotenv
-
-    load_dotenv()
-except ImportError:
-    print(
-        "Warning: dotenv module not found. Make sure to set environment variables manually."
-    )
+# Load environment variables
+load_dotenv()
 
 # Load calibration results
 CALIBRATION_FILE = "calibration_results.json"
@@ -70,3 +64,42 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Groq Settings
 GROQ_API_BASE = "https://api.groq.com/openai/v1"
+
+
+# Fetch Git username
+def get_git_username():
+    try:
+        result = subprocess.run(
+            ["git", "config", "user.name"], capture_output=True, text=True, check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return "UnknownUser"
+
+
+# Fetch Git repository name
+def get_git_repo_name():
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        repo_path = result.stdout.strip()
+        return os.path.basename(repo_path)
+    except subprocess.CalledProcessError:
+        return "UnknownRepo"
+
+
+# Define the profile and user names
+profile_name = get_git_repo_name()
+user_name = get_git_username()
+
+
+def get_profile_name():
+    return profile_name
+
+
+def get_user_name():
+    return user_name
