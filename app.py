@@ -1,18 +1,72 @@
 from fastapi import FastAPI, WebSocket
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from fastapi.responses import HTMLResponse
 import json
-from chat99 import generate_response, advanced_router
+from chat99 import chat_with_99
 
 app = FastAPI()
 
-class ChatMessage(BaseModel):
-    message: str
+html = """
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat99 Interface</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+            #chat-box { height: 400px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
+            #user-input { width: 100%; padding: 5px; }
+            .user-message { color: blue; }
+            .assistant-message { color: green; }
+        </style>
+    </head>
+    <body>
+        <h1>Chat99 Interface</h1>
+        <div id="chat-box"></div>
+        <input type="text" id="user-input" placeholder="Type your message here...">
+        <button onclick="sendMessage()">Send</button>
+        <script>
+            var ws = new WebSocket("ws://localhost:8000/ws");
+            ws.onmessage = function(event) {
+                var messages = document.getElementById('chat-box');
+                var data = JSON.parse(event.data);
+                var message = document.createElement('div');
+                if (data.error) {
+                    message.innerHTML = '<span style="color: red;">Error: ' + data.error + '</span>';
+                } else {
+                    message.innerHTML = '<span class="assistant-message">Chat99: ' + data.message + '</span>';
+                }
+                messages.appendChild(message);
+                messages.scrollTop = messages.scrollHeight;
+            };
+            function sendMessage() {
+                var input = document.getElementById("user-input");
+                var message = input.value;
+                if (message.trim() !== "") {
+                    ws.send(JSON.stringify({message: message}));
+                    var messages = document.getElementById('chat-box');
+                    messages.innerHTML += '<div class="user-message">You: ' + message + '</div>';
+                    input.value = '';
+                    messages.scrollTop = messages.scrollHeight;
+                }
+            }
+            document.getElementById("user-input").addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+        </script>
+    </body>
+</html>
+"""
+
+@app.get("/")
+async def get():
+    return HTMLResponse(html)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    conversation = []
+    conversation_history = []
 
     while True:
         try:
@@ -20,28 +74,8 @@ async def websocket_endpoint(websocket: WebSocket):
             message = json.loads(data)
             user_input = message['message']
 
-            conversation.append({"role": "user", "content": user_input})
+            response = chat_with_99(user_input, conversation_history)
 
-            route_config = advanced_router.route(user_input, conversation)
-            model = route_config['model']
-            max_tokens = route_config['max_tokens']
-            temperature = route_config['temperature']
-            response_strategy = route_config['response_strategy']
-
-            content = generate_response(model, conversation, max_tokens, temperature, response_strategy)
-
-            if content:
-                response = {
-                    "message": content,
-                    "model": model,
-                    "strategy": response_strategy
-                }
-                await websocket.send_json(response)
-                conversation.append({"role": "assistant", "content": content})
-            else:
-                await websocket.send_json({"error": "Failed to get a response. Please try again."})
+            await websocket.send_json({"message": response})
         except Exception as e:
             await websocket.send_json({"error": f"An error occurred: {str(e)}"})
-
-# Mount static files for UI
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
