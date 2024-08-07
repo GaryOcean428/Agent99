@@ -29,4 +29,15 @@ tiktoken
 pymongo==3.12.1
 pymongo[srv]==3.12.1
 nltk
+<<<<<<< HEAD
 redis
+=======
+redis
+
+# For Google Custom Search and SERP
+google-api-python-client==2.24.0
+google-auth==2.3.0
+google-auth-httplib2==0.1.0
+google-auth-oauthlib==0.4.6
+serpapi==0.6.0
+>>>>>>> fa07d026fe41eb63d9374cd5987c9eebbb28c44b
