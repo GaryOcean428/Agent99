@@ -1,9 +1,4 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
-version: 2
+version: 3
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -17,3 +12,79 @@ updates:
     directory: "/ruby"
     schedule:
       interval: "weekly"
+=======
+  - package-ecosystem: "pip" # Ecosystem for Python packages
+    directory: "/" # Location of package manifests (root directory)
+    schedule:
+      interval: "daily" # Check for updates daily
+    auto-merge:
+      - updated: true
+        paths:
+          - "**/requirements.txt"
+        merge-method: "fast-forward"
+        labels:
+          - "dependencies: update"
+
+  - package-ecosystem: "github-actions" # Ecosystem for GitHub Actions
+    directory: "/" # Location of workflows (root directory)
+    schedule:
+      interval: "daily" # Check for updates daily
+    auto-merge:
+      - updated: true
+        paths:
+          - "**/action.yml"
+        merge-method: "fast-forward"
+        labels:
+          - "dependencies: update"
+
+  - package-ecosystem: "docker" # Ecosystem for Docker dependencies
+    directory: "/" # Location of Dockerfiles (root directory)
+    schedule:
+      interval: "daily" # Check for updates daily
+    auto-merge:
+      - updated: true
+        paths:
+          - "**/Dockerfile"
+        merge-method: "fast-forward"
+        labels:
+          - "dependencies: update"
+
+  - package-ecosystem: "npm" # Ecosystem for JavaScript packages
+    directory: "/" # Location of package.json (root directory)
+    schedule:
+      interval: "daily" # Check for updates daily
+    auto-merge:
+      - updated: true
+        paths:
+          - "**/package.json"
+        merge-method: "fast-forward"
+        labels:
+          - "dependencies: update"
+
+  - package-ecosystem: "github" # Ecosystem for GitHub dependencies
+    directory: "/" # Location of package manifests (root directory)
+    schedule:
+      interval: "daily" # Check for updates daily
+    auto-merge:
+      - updated: true
+        paths:
+          - "**/go.mod"
+        merge-method: "fast-forward"
+        labels:
+          - "dependencies: update"
+
+rules:
+  - type: branches
+    include:
+      - main
+    ignore:
+      - " master*"
+    paths:
+      - "**/.*"
+    version-regex:^v[0-9]+.*
+    branches:
+      - main -> master
+    merge-method: "fast-forward"
+
+# This configuration will check for updates daily for each package ecosystem
+# and automatically merge the branches into master if the update doesn't break the master.
