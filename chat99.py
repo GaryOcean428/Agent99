@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 chat99.py: Main module for the Chat99 AI assistant.
 
@@ -10,6 +11,13 @@ language models and adaptive response strategies.
 import os
 import logging
 from typing import List, Dict
+=======
+import os
+import argparse
+from typing import List, Dict
+import time
+
+>>>>>>> 06a7491 (Refactor HTML code for Chat99 interface)
 from dotenv import load_dotenv
 from anthropic import Anthropic
 from groq import Groq
