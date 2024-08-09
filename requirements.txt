@@ -1,7 +1,7 @@
 # API interaction
-anthropic==0.31.2
+anthropic==0.32.0
 routellm[serve,eval]==0.2.0
-openai==1.27.0
+openai==1.40.2
 groq==0.9.0
 
 # Environment variable management
@@ -14,26 +14,25 @@ rich==13.7.1
 twine==5.1.1
 
 # Additional dependencies
-requests==2.31.0
+requests==2.32.3
 
 # For RouteLLM
 numpy
 pandas
 scikit-learn
 torch
-transformers
-datasets
-tiktoken
+transformers==4.44.0
+datasets==2.20.0
+tiktoken==0.7.0
 
 # For memory
-pymongo==3.12.1
-pymongo[srv]==3.12.1
-nltk
-redis
+pymongo==4.8.0
+nltk==3.8.1
+redis==5.0.8
 
 # For Google Custom Search and SERP
-google-api-python-client==2.24.0
-google-auth==2.3.0
-google-auth-httplib2==0.1.0
-google-auth-oauthlib==0.4.6
-serpapi==0.6.0
+google-api-python-client==2.140.0
+google-auth==2.33.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.1
+serpapi==0.1.5
