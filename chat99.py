@@ -111,7 +111,7 @@ def get_strategy_instruction(strategy: str) -> str:
     Get the instruction for the specified response strategy.
 
     Args:
-        strategy (str): The response strategy to use.
+        strategy: The response strategy to use.
 
     Returns:
         str: The instruction for the specified strategy.
