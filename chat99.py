@@ -11,16 +11,11 @@ import os
 import logging
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
-from anthropic import (
-    Anthropic,
-    APIError as AnthropicAPIError,
-    RateLimitError as AnthropicRateLimitError,
-)
+from anthropic import Anthropic, APIError as AnthropicAPIError, RateLimitError as AnthropicRateLimitError
 from groq import Groq
 from groq.errors import APIError as GroqAPIError, RateLimitError as GroqRateLimitError
 from rich.console import Console
 from advanced_router import advanced_router
-
 try:
     from memory_manager import MemoryManager
 except ImportError as import_error:
@@ -34,8 +29,8 @@ load_dotenv()
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +44,6 @@ memory_manager = MemoryManager()
 HIGH_TIER_MODEL = "claude-3-5-sonnet-20240620"
 MID_TIER_MODEL = "llama-3.1-70b-versatile"
 LOW_TIER_MODEL = "llama-3.1-8b-instant"
-
 
 def generate_response(
     model: str,
@@ -134,7 +128,6 @@ def generate_response(
         logger.error("Unexpected error in generate_response: %s", str(e))
         return "An unexpected error occurred. Please try again or contact support if the issue persists."
 
-
 def get_strategy_instruction(strategy: str) -> str:
     """
     Get the instruction for the specified response strategy.
@@ -166,7 +159,6 @@ def get_strategy_instruction(strategy: str) -> str:
         strategy,
         "Respond naturally to the query, providing relevant information and insights.",
     )
-
 
 def chat_with_99(
     user_input: str, conversation_history: Optional[List[Dict[str, str]]] = None
@@ -211,7 +203,6 @@ def chat_with_99(
             "Please try again later."
         )
 
-
 def display_chat_summary(chat_history: List[Dict[str, str]]) -> None:
     """
     Display a summary of the chat history.
@@ -222,33 +213,23 @@ def display_chat_summary(chat_history: List[Dict[str, str]]) -> None:
     console.print("\n[bold]Chat Summary:[/bold]")
     for entry in chat_history:
         role = entry["role"]
-        content = (
-            entry["content"][:50] + "..."
-            if len(entry["content"]) > 50
-            else entry["content"]
-        )
+        content = entry["content"][:50] + "..." if len(entry["content"]) > 50 else entry["content"]
         if role == "user":
             console.print(f"[blue]User:[/blue] {content}")
         else:
             console.print(f"[green]Assistant:[/green] {content}")
 
-
 def main() -> None:
     """
     Main function to run the Chat99 assistant.
     """
-    console.print(
-        "[bold]Welcome to Chat99! Type 'exit' to end the conversation, or 'summary' to see chat history.[/bold]"
-    )
+    console.print("[bold]Welcome to Chat99! Type 'exit' to end the conversation, or 'summary' to see chat history.[/bold]")
     chat_history: List[Dict[str, str]] = []
 
     while True:
         user_message = console.input("[bold blue]You:[/bold blue] ")
-
         if user_message.lower() == "exit":
-            console.print(
-                "[bold green]Chat99:[/bold green] Goodbye! It was nice chatting with you."
-            )
+            console.print("[bold green]Chat99:[/bold green] Goodbye! It was nice chatting with you.")
             break
         elif user_message.lower() == "summary":
             display_chat_summary(chat_history)
@@ -256,7 +237,6 @@ def main() -> None:
 
         response = chat_with_99(user_message, chat_history)
         console.print(f"[bold green]Chat99:[/bold green] {response}")
-
 
 if __name__ == "__main__":
     main()
