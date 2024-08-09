@@ -1,38 +1,57 @@
 # API interaction
-anthropic==0.32.0
-routellm[serve,eval]==0.2.0
-openai==1.40.2
-groq==0.9.0
+anthropic
+routellm[serve,eval]
+openai
+groq
 
 # Environment variable management
-python-dotenv==1.0.1
+python-dotenv
 
 # Console formatting and rich text
-rich==13.7.1
+rich
+pylint
+pylint[spelling]
 
 # PyPI package distribution
-twine==5.1.1
+twine
 
 # Additional dependencies
-requests==2.32.3
+requests
 
 # For RouteLLM
 numpy
 pandas
 scikit-learn
 torch
-transformers==4.44.0
-datasets==2.20.0
-tiktoken==0.7.0
+transformers
+datasets
+tiktoken
 
 # For memory
-pymongo==4.8.0
-nltk==3.8.1
-redis==5.0.8
+pymongo
+nltk
+redis
 
 # For Google Custom Search and SERP
-google-api-python-client==2.140.0
-google-auth==2.33.0
-google-auth-httplib2==0.2.0
-google-auth-oauthlib==1.2.1
-serpapi==0.1.5
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+serpapi
+
+
+ansio
+python-dotenv
+langchain-groq
+langchain-huggingface
+langchain-openai
+langchain-community
+langchain-anthropic
+langchain-chroma
+langchain-google-genai
+webcolors
+sentence-transformers
+docker
+paramiko
+duckduckgo_search
+inputimeout
