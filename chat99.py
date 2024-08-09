@@ -18,7 +18,6 @@ from memory_manager import memory_manager
 from search import perform_search
 from rag import retrieve_relevant_info
 
-# Load environment variables
 load_dotenv()
 
 # Set up logging
@@ -67,17 +66,20 @@ def generate_response(
                 max_tokens=max_tokens,
                 temperature=temperature,
                 messages=messages,
+                messages=messages,
             )
-            raw_response = response.content[0].text
+            return response.content[0].text
         elif model in [MID_TIER_MODEL, LOW_TIER_MODEL]:
             client = Groq(api_key=os.getenv("GROQ_API_KEY"))
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
+                messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
+                temperature=temperature,
             )
-            raw_response = response.choices[0].message.content
+            return response.choices[0].message.content
         else:
             raise ValueError(f"Invalid model specified: {model}")
 
@@ -87,6 +89,8 @@ def generate_response(
 
         return raw_response
 
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Network error: {str(e)}[/bold red]")
     except Exception as e:
         logger.error(f"An error occurred during response generation: {str(e)}")
         return "I apologize, but I encountered an error while processing your request. Please try again later or contact support if the issue persists."

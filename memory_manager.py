@@ -116,6 +116,7 @@ class MemoryManager:
         """Add a message to short-term memory, removing oldest if limit is reached."""
         self.short_term_memory.append(message)
         if len(self.short_term_memory) > 10:  # Adjust as needed
+        if len(self.short_term_memory) > 10:  # Adjust as needed
             self.short_term_memory.pop(0)
 
     def update_memory(self, user_input: str, response: str):
@@ -176,6 +177,9 @@ class MemoryManager:
     def determine_complexity(self, user_input: str) -> str:
         """Determine the complexity of the user input."""
         word_count = len(user_input.split())
+        if word_count > 50 or any(
+            word in user_input.lower() for word in ["complex", "difficult", "advanced"]
+        ):
         if word_count > 50 or any(
             word in user_input.lower() for word in ["complex", "difficult", "advanced"]
         ):
