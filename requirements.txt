@@ -30,6 +30,7 @@ tiktoken
 
 # For memory
 pymongo
+pymongo[srv]
 nltk
 redis
 

@@ -13,7 +13,7 @@ from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from anthropic import Anthropic, APIError as AnthropicAPIError, RateLimitError as AnthropicRateLimitError
 from groq import Groq
-from groq.errors import APIError as GroqAPIError, RateLimitError as GroqRateLimitError
+from groq import APIError as GroqAPIError, RateLimitError as GroqRateLimitError
 from rich.console import Console
 from advanced_router import advanced_router
 try:

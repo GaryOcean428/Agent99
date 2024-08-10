@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 
 import redis
 from pymongo import MongoClient
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
