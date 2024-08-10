@@ -11,6 +11,7 @@ python-dotenv
 rich
 pylint
 pylint[spelling]
+pytest
 
 # PyPI package distribution
 twine
