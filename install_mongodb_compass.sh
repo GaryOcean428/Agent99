@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Update and install dependencies
+# Install dependencies
 sudo apt-get update
 sudo apt-get install -y libnotify4 libxtst6 xdg-utils libxcb-dri3-0 gnome-keyring
 
