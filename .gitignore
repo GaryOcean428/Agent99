@@ -1,1 +1,82 @@
+# Environment variables
 .env
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyp
+*.pyt
+*.pyw
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Logs
+*.log
+
+# Compiled source
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Packages
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# IDEs and editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Database
+*.sqlite
+*.db
+
+# Build directories
+build/
+dist/
+target/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.swn
+
+# Coverage reports
+coverage/
+*.lcov
+
+# System files
+*.pid
+*.seed
+*.pid.lock
+
+# Other
+mongodb-compass.deb
