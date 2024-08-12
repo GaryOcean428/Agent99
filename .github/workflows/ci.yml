@@ -39,3 +39,6 @@ jobs:
     - name: Linting
       run: |
         flake8 .
+
+    - name: Git Auto Commit
+      uses: stefanzweifel/git-auto-commit-action@v5.0.1

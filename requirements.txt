@@ -30,7 +30,9 @@ tiktoken
 
 # For memory
 pymongo
+pymongo[srv]
 nltk
+nltk.
 redis
 
 # For Google Custom Search and SERP

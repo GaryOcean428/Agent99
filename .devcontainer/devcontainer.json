@@ -1,0 +1,9 @@
+{
+    "name": "My Codespace",
+    "build": {
+      "dockerfile": "Dockerfile"
+    },
+    "postCreateCommand": "./install_mongodb_compass.sh",
+    "runArgs": ["--init"]
+  }
+  

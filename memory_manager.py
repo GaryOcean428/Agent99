@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 
 import redis
 from pymongo import MongoClient
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -80,7 +82,7 @@ class MemoryManager:
 
         if mongo_uri:
             try:
-                mongo_client = MongoClient(mongo_uri)
+                mongo_client = MongoClient(mongo_uri, server_api=ServerApi('1'))
                 mongo_db = mongo_client[self.database]
                 mongo_collection = mongo_db[self.collection]
                 return mongo_client, mongo_db, mongo_collection

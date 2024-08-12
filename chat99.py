@@ -10,19 +10,25 @@ language models and adaptive response strategies.
 import os
 import logging
 from typing import List, Dict, Optional
-from dotenv import load_dotenv
-from anthropic import Anthropic, APIError as AnthropicAPIError, RateLimitError as AnthropicRateLimitError
-from groq import Groq
-from groq.errors import APIError as GroqAPIError, RateLimitError as GroqRateLimitError
-from rich.console import Console
-from advanced_router import advanced_router
+
 try:
+    import nltk
+    from dotenv import load_dotenv
+    from anthropic import (
+        Anthropic,
+        APIError as AnthropicAPIError,
+        RateLimitError as AnthropicRateLimitError
+    )
+    from groq import Groq, APIError as GroqAPIError, RateLimitError as GroqRateLimitError
+    from rich.console import Console
+    from advanced_router import advanced_router
     from memory_manager import MemoryManager
-except ImportError as import_error:
-    print("Error importing 'memory_manager':", str(import_error))
+    from search import perform_search
+    from rag import retrieve_relevant_info
+except ImportError as e:
+    print(f"Error importing required modules: {str(e)}")
+    print("Please make sure all required packages are installed.")
     raise
-from search import perform_search
-from rag import retrieve_relevant_info
 
 # Load environment variables
 load_dotenv()
@@ -30,12 +36,28 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 logger = logging.getLogger(__name__)
 
 # Set up Rich console
 console = Console()
+
+# Download NLTK data
+def download_nltk_data():
+    """Download required NLTK data."""
+    try:
+        nltk.download('punkt')
+        nltk.download('averaged_perceptron_tagger')
+        nltk.download('maxent_ne_chunker')
+        nltk.download('words')
+    except Exception as e:
+        logger.error("Error downloading NLTK data: %s", str(e))
+        raise
+
+# Initialize NLTK data
+download_nltk_data()
 
 # Initialize MemoryManager
 memory_manager = MemoryManager()
@@ -115,18 +137,24 @@ def generate_response(
 
         return generated_response
 
-    except (AnthropicAPIError, GroqAPIError) as api_error:
-        logger.error("API Error: %s", str(api_error))
-        return "I'm sorry, but I encountered an error while processing your request. Please try again later."
     except (AnthropicRateLimitError, GroqRateLimitError) as rate_limit_error:
         logger.error("Rate limit error: %s", str(rate_limit_error))
-        return "I apologize, but we've reached our API rate limit. Please try again in a moment."
-    except ValueError as value_error:
-        logger.error("Value error: %s", str(value_error))
-        return "I encountered an issue with the specified parameters. Please try again or contact support."
+        return (
+            "I apologize, but we've reached our API rate limit. "
+            "Please try again in a moment."
+        )
+    except (AnthropicAPIError, GroqAPIError, ValueError) as error:
+        logger.error("API or Value Error: %s", str(error))
+        return (
+            "I'm sorry, but I encountered an error while processing your request. "
+            "Please try again later."
+        )
     except Exception as e:
         logger.error("Unexpected error in generate_response: %s", str(e))
-        return "An unexpected error occurred. Please try again or contact support if the issue persists."
+        return (
+            "An unexpected error occurred. Please try again or contact support "
+            "if the issue persists."
+        )
 
 def get_strategy_instruction(strategy: str) -> str:
     """
@@ -146,13 +174,16 @@ def get_strategy_instruction(strategy: str) -> str:
             "consider relevant information, and explain your thought process clearly."
         ),
         "direct_answer": (
-            "Provide a concise, direct answer to the question without unnecessary elaboration."
+            "Provide a concise, direct answer to the question "
+            "without unnecessary elaboration."
         ),
         "boolean_with_explanation": (
-            "Start with a clear Yes or No, then provide a brief explanation for your answer."
+            "Start with a clear Yes or No, then provide a brief explanation "
+            "for your answer."
         ),
         "open_discussion": (
-            "Engage in an open-ended discussion, providing insights and asking follow-up questions."
+            "Engage in an open-ended discussion, providing insights "
+            "and asking follow-up questions."
         ),
     }
     return strategies.get(
@@ -213,7 +244,11 @@ def display_chat_summary(chat_history: List[Dict[str, str]]) -> None:
     console.print("\n[bold]Chat Summary:[/bold]")
     for entry in chat_history:
         role = entry["role"]
-        content = entry["content"][:50] + "..." if len(entry["content"]) > 50 else entry["content"]
+        content = (
+            entry["content"][:50] + "..."
+            if len(entry["content"]) > 50
+            else entry["content"]
+        )
         if role == "user":
             console.print(f"[blue]User:[/blue] {content}")
         else:
@@ -223,15 +258,22 @@ def main() -> None:
     """
     Main function to run the Chat99 assistant.
     """
-    console.print("[bold]Welcome to Chat99! Type 'exit' to end the conversation, or 'summary' to see chat history.[/bold]")
+    console.print(
+        "[bold]Welcome to Chat99! Type 'exit' to end the conversation, "
+        "or 'summary' to see chat history.[/bold]"
+    )
     chat_history: List[Dict[str, str]] = []
 
     while True:
         user_message = console.input("[bold blue]You:[/bold blue] ")
+        
         if user_message.lower() == "exit":
-            console.print("[bold green]Chat99:[/bold green] Goodbye! It was nice chatting with you.")
+            console.print(
+                "[bold green]Chat99:[/bold green] Goodbye! "
+                "It was nice chatting with you."
+            )
             break
-        elif user_message.lower() == "summary":
+        if user_message.lower() == "summary":
             display_chat_summary(chat_history)
             continue
 
