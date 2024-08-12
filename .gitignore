@@ -5,7 +5,7 @@
 node_modules/
 vendor/
 
-# Python
+# Python cache and compiled files
 __pycache__/
 *.py[cod]
 *.pyo
@@ -13,6 +13,32 @@ __pycache__/
 *.pyp
 *.pyt
 *.pyw
+
+# Python virtual environments
+venv/
+ENV/
+env/
+*.virtualenv
+
+# Python egg files
+*.egg
+*.egg-info/
+dist/
+eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg-info/
+pip-log.txt
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Python packaging
+*.wheel
 
 # macOS
 .DS_Store
