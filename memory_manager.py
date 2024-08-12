@@ -82,7 +82,7 @@ class MemoryManager:
 
         if mongo_uri:
             try:
-                mongo_client = MongoClient(mongo_uri)
+                mongo_client = MongoClient(mongo_uri, server_api=ServerApi('1'))
                 mongo_db = mongo_client[self.database]
                 mongo_collection = mongo_db[self.collection]
                 return mongo_client, mongo_db, mongo_collection
