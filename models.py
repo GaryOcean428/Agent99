@@ -5,8 +5,10 @@ MODELS = {
     "4": {"name": "haiku-3", "id": "claude-3-haiku-20240307"}
 }
 
+
 def get_model_info(model_key):
     return MODELS.get(model_key)
+
 
 def get_model_list():
     return MODELS

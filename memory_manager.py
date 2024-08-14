@@ -68,7 +68,8 @@ class MemoryManager:
             return redis_client
         except redis.RedisError as e:
             logger.error(
-                "Failed to connect to Redis: %s. Caching will be disabled.", str(e)
+                "Failed to connect to Redis: %s. Caching will be disabled.", str(
+                    e)
             )
             return None
 
@@ -82,7 +83,8 @@ class MemoryManager:
 
         if mongo_uri:
             try:
-                mongo_client = MongoClient(mongo_uri, server_api=ServerApi('1'))
+                mongo_client = MongoClient(
+                    mongo_uri, server_api=ServerApi('1'))
                 mongo_db = mongo_client[self.database]
                 mongo_collection = mongo_db[self.collection]
                 return mongo_client, mongo_db, mongo_collection
@@ -107,7 +109,8 @@ class MemoryManager:
 
         if self.redis_client:
             try:
-                self.redis_client.setex(f"{user_input}_last_response", 3600, response)
+                self.redis_client.setex(
+                    f"{user_input}_last_response", 3600, response)
             except redis.RedisError as e:
                 logger.error("Redis error: %s", str(e))
 
@@ -122,7 +125,8 @@ class MemoryManager:
                 relevant_info.append(message["content"])
 
         try:
-            long_term_memories = self._get_long_term_memories(user_input, limit=5)
+            long_term_memories = self._get_long_term_memories(
+                user_input, limit=5)
             for memory in long_term_memories:
                 topic = memory.get("topic", "Unknown")
                 summary = memory.get("summary", "No summary available")
@@ -207,7 +211,8 @@ class MemoryManager:
             query_vector = self.vectorizer.fit_transform([query])
             memory_vectors = self.vectorizer.transform(memory_texts)
 
-            similarities = cosine_similarity(query_vector, memory_vectors).flatten()
+            similarities = cosine_similarity(
+                query_vector, memory_vectors).flatten()
             top_indices = similarities.argsort()[-limit:][::-1]
 
             return [all_memories[i] for i in top_indices]
@@ -239,7 +244,8 @@ class MemoryManager:
         if self.mongo_collection:
             try:
                 cutoff_date = datetime.now() - timedelta(days=30)  # Adjust as needed
-                self.mongo_collection.delete_many({"timestamp": {"$lt": cutoff_date}})
+                self.mongo_collection.delete_many(
+                    {"timestamp": {"$lt": cutoff_date}})
             except MongoClient.errors.OperationFailure as e:
                 logger.error("Error cleaning up memory: %s", str(e))
 

@@ -44,7 +44,8 @@ class AdvancedRouter:
             question_type, task_type
         )
 
-        config = self._adjust_params_based_on_history(config, conversation_history)
+        config = self._adjust_params_based_on_history(
+            config, conversation_history)
 
         logger.info(f"Routing decision: {config}")
         return config
@@ -153,7 +154,8 @@ class AdvancedRouter:
             "temperature": 0.7,
         }
         if task_type in ["analysis", "creative"]:
-            config["max_tokens"] = 768  # Increase token limit for more complex tasks
+            # Increase token limit for more complex tasks
+            config["max_tokens"] = 768
         return config
 
     def _get_high_tier_config(self, task_type: str) -> Dict[str, Any]:
@@ -166,7 +168,8 @@ class AdvancedRouter:
             "temperature": 0.9,
         }
         if task_type in ["coding", "analysis"]:
-            config["temperature"] = 0.7  # Lower temperature for more precise outputs
+            # Lower temperature for more precise outputs
+            config["temperature"] = 0.7
         return config
 
     def _adjust_params_based_on_history(
