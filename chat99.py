@@ -45,6 +45,8 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 # Download NLTK data
+
+
 def download_nltk_data():
     """Download required NLTK data."""
     try:
@@ -56,6 +58,7 @@ def download_nltk_data():
         logger.error("Error downloading NLTK data: %s", str(e))
         raise
 
+
 # Initialize NLTK data
 download_nltk_data()
 
@@ -66,6 +69,7 @@ memory_manager = MemoryManager()
 HIGH_TIER_MODEL = "claude-3-5-sonnet-20240620"
 MID_TIER_MODEL = "llama-3.1-70b-versatile"
 LOW_TIER_MODEL = "llama-3.1-8b-instant"
+
 
 def generate_response(
     model: str,
@@ -89,7 +93,8 @@ def generate_response(
     """
     try:
         # Get relevant context from memory and RAG
-        context = memory_manager.get_relevant_context(conversation[-1]["content"])
+        context = memory_manager.get_relevant_context(
+            conversation[-1]["content"])
         rag_info = retrieve_relevant_info(conversation[-1]["content"])
         search_results = perform_search(conversation[-1]["content"])
 
@@ -156,6 +161,7 @@ def generate_response(
             "if the issue persists."
         )
 
+
 def get_strategy_instruction(strategy: str) -> str:
     """
     Get the instruction for the specified response strategy.
@@ -190,6 +196,7 @@ def get_strategy_instruction(strategy: str) -> str:
         strategy,
         "Respond naturally to the query, providing relevant information and insights.",
     )
+
 
 def chat_with_99(
     user_input: str, conversation_history: Optional[List[Dict[str, str]]] = None
@@ -234,6 +241,7 @@ def chat_with_99(
             "Please try again later."
         )
 
+
 def display_chat_summary(chat_history: List[Dict[str, str]]) -> None:
     """
     Display a summary of the chat history.
@@ -254,6 +262,7 @@ def display_chat_summary(chat_history: List[Dict[str, str]]) -> None:
         else:
             console.print(f"[green]Assistant:[/green] {content}")
 
+
 def main() -> None:
     """
     Main function to run the Chat99 assistant.
@@ -266,7 +275,7 @@ def main() -> None:
 
     while True:
         user_message = console.input("[bold blue]You:[/bold blue] ")
-        
+
         if user_message.lower() == "exit":
             console.print(
                 "[bold green]Chat99:[/bold green] Goodbye! "
@@ -279,6 +288,7 @@ def main() -> None:
 
         response = chat_with_99(user_message, chat_history)
         console.print(f"[bold green]Chat99:[/bold green] {response}")
+
 
 if __name__ == "__main__":
     main()

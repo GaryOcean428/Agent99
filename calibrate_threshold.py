@@ -20,8 +20,10 @@ def calibrate_threshold(
     """
     Calibrate the complexity threshold for the AdvancedRouter.
     """
-    complexities = [router.determine_complexity(query["content"]) for query in queries]
-    strong_model_calls = sum(1 for complexity in complexities if complexity == "high")
+    complexities = [router.determine_complexity(
+        query["content"]) for query in queries]
+    strong_model_calls = sum(
+        1 for complexity in complexities if complexity == "high")
     actual_strong_pct = strong_model_calls / len(queries)
 
     if actual_strong_pct < target_strong_pct:
@@ -63,7 +65,8 @@ def main():
     router = AdvancedRouter()
 
     # Calibrate threshold
-    threshold = calibrate_threshold(router, sample_queries, args.strong_model_pct)
+    threshold = calibrate_threshold(
+        router, sample_queries, args.strong_model_pct)
 
     print(
         f"Optimal threshold for {args.strong_model_pct*100}% strong model calls: {threshold}"
