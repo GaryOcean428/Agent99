@@ -1,3 +1,7 @@
+"""
+search.py: Implements web search functionality for the Chat99 system.
+"""
+
 import os
 from typing import List, Dict, Optional
 from googleapiclient.discovery import build
@@ -9,20 +13,13 @@ SEARCH_ENGINE_ID = os.getenv("SEARCH_ENGINE_ID")
 
 
 def google_search(query: str, num_results: int = 5) -> List[Dict[str, str]]:
-    """
-    Perform a Google search using the Custom Search API.
-
-    Args:
-        query (str): The search query.
-        num_results (int): The number of search results to return. Default is 5.
-
-    Returns:
-        List[Dict[str, str]]: A list of dictionaries containing search results.
-    """
+    if not API_KEY or not SEARCH_ENGINE_ID:
+        logger.error("Google API key or Search Engine ID is missing")
+        return []
     try:
         service = build("customsearch", "v1", developerKey=API_KEY)
         res = (
-            service.cse().list_(q=query, cx=SEARCH_ENGINE_ID, num=num_results).execute()
+            service.cse().list(q=query, cx=SEARCH_ENGINE_ID, num=num_results).execute()
         )
 
         results = []
@@ -37,7 +34,7 @@ def google_search(query: str, num_results: int = 5) -> List[Dict[str, str]]:
 
         return results
     except HttpError as e:
-        print(f"An error occurred during the Google search: {str(e)}")
+        logger.error(f"An error occurred during the Google search: {str(e)}")
         return []
 
 
