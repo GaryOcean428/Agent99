@@ -10,6 +10,7 @@
         #user-input { width: 100%; padding: 5px; }
         .user-message { color: blue; }
         .assistant-message { color: green; }
+        #file-upload { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -17,7 +18,10 @@
     <div id="chat-box"></div>
     <input type="text" id="user-input" placeholder="Type your message here...">
     <button onclick="sendMessage()">Send</button>
-
+    <div id="file-upload">
+        <input type="file" id="file-input">
+        <button onclick="uploadFile()">Upload File</button>
+    </div>
     <script>
         const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('user-input');
@@ -28,4 +32,130 @@
             if (data.error) {
                 appendMessage('Error: ' + data.error, 'error');
             } else {
-                appendMessage('Chat99: ' +
+                appendMessage('Chat99: ' + data.message, 'assistant-message');
+            }
+        };
+
+        function sendMessage() {
+            const message = userInput.value;
+            socket.send(JSON.stringify({ message: message }));
+            appendMessage('You: ' + message, 'user-message');
+            userInput.value = '';
+        }
+
+        function appendMessage(message, className) {
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messageElement.className = className;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function uploadFile() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        appendMessage('Error: ' + data.error, 'error');
+                    } else {
+                        appendMessage('File uploaded successfully!', 'assistant-message');
+                    }
+                })
+                .catch(error => {
+                    appendMessage('Error: ' + error.message, 'error');
+                });
+            }
+        }
+    </script>
+</body>
+</html>
+EOL # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+cat Agent99/app.py # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+cat > Agent99/app.py <<EOL
+from flask import Flask, request, jsonify, send_from_directory
+import os
+
+app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+    return jsonify({'message': 'File uploaded successfully!'}), 200
+
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
+
+@app.route('/')
+def index():
+    return send_from_directory('static', 'index.html')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000)
+EOL # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+pip install flask && python Agent99/app.py # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+curl -F 'file=@testfile.txt' http://localhost:8000/upload # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+curl http://localhost:8000 # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+ps aux | grep flask # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+python Agent99/app.py # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+cat > Agent99/app.py <<EOL
+from flask import Flask, request, jsonify, send_from_directory
+import os
+
+app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    print('Upload endpoint hit')
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+    return jsonify({'message': 'File uploaded successfully!'}), 200
+
+@app.route('/static/<path:path>')
+def send_static(path):
+    print('Static file endpoint hit')
+    return send_from_directory('static', path)
+
+@app.route('/')
+def index():
+    print('Index endpoint hit')
+    return send_from_directory('static', 'index.html')
+
+if __name__ == '__main__':
+    print('Starting Flask app')
+    app.run(host='0.0.0.0', port=8000)
+EOL # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+python Agent99/app.py # @@==>> SSHInteractiveSession End-of-Command  <<==@@
+cat > simple_flask_app.py <<EOL
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return 'Hello, World!'
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000)

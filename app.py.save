@@ -1,0 +1,127 @@
+sed -i 's|@app.route(/upload, methods=[POST])|@app.route("/upload", methods=["POST"])|' app.py && sed -i 's|app.config[UPLOAD_FOLDER] = 
+UPLOAD_FOLDER|app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER|' app.py && echo "import os" | cat - app.py > temp && mv temp app.py && echo "from flask 
+import Flask, request, jsonify, send_from_directory" | cat - app.py > temp && mv temp app.py && echo "from flask import Flask, request, jsonify, 
+send_from_directory, POST" | cat - app.py > temp && mv temp app.py && python3 app.py \from flask import Flask, request, jsonify, send_from_directory 
+from werkzeug.utils import secure_filename
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+nano app.py \app = Flask(__name__)
+# @@==>> SSHInteractiveSession End-of-Command <<==@@ Define the upload folder
+sed -i '1i import osUPLOAD_FOLDER = "./uploads" app.config[UPLOAD_FOLDER] = UPLOAD_FOLDER from flask import Flask, request, jsonify, 
+send_from_directory' app.py && sed -i 's|@app.route(/upload, methods=[POST])|@app.route("/upload", methods=["POST"])|' app.py && sed -i 
+'s|app.config[UPLOAD_FOLDER] = UPLOAD_FOLDER|app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER|' app.py && python3 app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@# Define allowed file extensions
+nano app.py \ALLOWED_EXTENSIONS = {txt, pdf, png, jpg, jpeg, gif}
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+sed -i '1i import os' app.py && sed -i '1i from flask import Flask, request, jsonify, send_from_directory' app.py && sed -i 's|@app.route(/upload, 
+    methods=[POST])|@app.route("/upload", methods=["POST"])|' app.py && sed -i 's|app.config[UPLOAD_FOLDER] = UPLOAD_FOLDER|app.config["UPLOAD_FOLDER"] 
+    = UPLOAD_FOLDER|' app.py && python3 app.py \def allowed_file(filename): return "." in filename and filename.rsplit(".", 1)[-1].lower() in 
+    ALLOWED_EXTENSIONS
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+nano app.py \@app.route(/upload, methods=[POST]) def upload_file():
+# @@==>> SSHInteractiveSession End-of-Command <<==@@ if request.method == POST:
+echo 'import os # Check if the post request has the file part if file not in request.files: from flask import Flask, request, jsonify, 
+send_from_directory return jsonify({"error": "No file part"}), 400 from werkzeug.utils import secure_filename file = request.files[file]
+        # If user does not select file, browser also submit an empty part without filename
+app = Flask(__name__) if file.filename == : return jsonify({"error": "No selected file"}), 400 if file and allowed_file(file.filename):
+# Define the upload folder filename = secure_filename(file.filename)
+UPLOAD_FOLDER = "./uploads" file.save(os.path.join(app.config[UPLOAD_FOLDER], filename)) return jsonify({"message": "File uploaded successfully"}), 200 
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER return jsonify({"error": "Invalid request"}), 400
+# Define allowed file extensions
+ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"} def allowed_file(filename): return "." in filename and filename.rsplit(".", 
+    1)[-1].lower() in ALLOWED_EXTENSIONS
+@app.route("/upload", methods=["POST"]) def upload_file(): if request.method == "POST":
+        # Check if the post request has the file part
+        if "file" not in request.files: return jsonify({"error": "No file part"}), 400 file = request.files["file"]
+        # If user does not select file, browser also submit an empty part without filename
+        if file.filename == "": return jsonify({"error": "No selected file"}), 400 if file and allowed_file(file.filename): filename = 
+            secure_filename(file.filename) file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename)) return jsonify({"message": "File uploaded 
+            successfully"}), 200
+    return jsonify({"error": "Invalid request"}), 400 ' > app.py && python3 app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+nano app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+echo 'import os from flask import Flask, request, jsonify, send_from_directory from werkzeug.utils import secure_filename app = Flask(__name__) 
+UPLOAD_FOLDER = "./uploads" app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"} def 
+allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS @app.route("/upload", methods=["POST"]) def upload_file(): if 
+    request.method == "POST":
+        if "file" not in request.files: return jsonify({"error": "No file part"}), 400 file = request.files["file"] if file.filename == "": return 
+            jsonify({"error": "No selected file"}), 400
+        if file and allowed_file(file.filename): filename = secure_filename(file.filename) file.save(os.path.join(app.config["UPLOAD_FOLDER"], 
+            filename)) return jsonify({"message": "File uploaded successfully"}), 200
+    return jsonify({"error": "Invalid request"}), 400 ' > app.py && python3 app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+nano app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+echo 'import os from flask import Flask, request, jsonify, send_from_directory from werkzeug.utils import secure_filename app = Flask(__name__) 
+UPLOAD_FOLDER = "./uploads" app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"} def 
+allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS @app.route("/upload", methods=["POST"]) def upload_file(): if 
+    request.method == "POST":
+        if "file" not in request.files: return jsonify({"error": "No file part"}), 400 file = request.files["file"] if file.filename == "": return 
+            jsonify({"error": "No selected file"}), 400
+        if file and allowed_file(file.filename): filename = secure_filename(file.filename) file.save(os.path.join(app.config["UPLOAD_FOLDER"], 
+            filename)) return jsonify({"message": "File uploaded successfully"}), 200
+    return jsonify({"error": "Invalid request"}), 400 ' > app.py && nano app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+nano app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+cat > app.py << EOL import os from flask import Flask, request, jsonify, send_from_directory from werkzeug.utils import secure_filename app = 
+Flask(__name__) UPLOAD_FOLDER = "./uploads" app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"} 
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS @app.route("/upload", methods=["POST"]) def upload_file(): if 
+    request.method == "POST":
+        if "file" not in request.files: return jsonify({"error": "No file part"}), 400 file = request.files["file"] if file.filename == "": return 
+            jsonify({"error": "No selected file"}), 400
+        if file and allowed_file(file.filename): filename = secure_filename(file.filename) file.save(os.path.join(app.config["UPLOAD_FOLDER"], 
+            filename)) return jsonify({"message": "File uploaded successfully"}), 200
+    return jsonify({"error": "Invalid request"}), 400 if __name__ == "__main__": app.run(debug=True) EOL \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+echo '' > app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+echo 'import os from flask import Flask, request, jsonify, send_from_directory from werkzeug.utils import secure_filename ' >> app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+echo 'app = Flask(__name__) UPLOAD_FOLDER = "./uploads" app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", 
+"jpeg", "gif"} ' >> app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+echo 'def allowed_file(filename): return "." in filename and filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS ' >> app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+echo '@app.route("/upload", methods=["POST"]) def upload_file(): if request.method == "POST": if "file" not in request.files: return jsonify({"error": 
+            "No file part"}), 400
+        file = request.files["file"] if file.filename == "": return jsonify({"error": "No selected file"}), 400 if file and allowed_file(file.filename): 
+            filename = secure_filename(file.filename) file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename)) return jsonify({"message": "File 
+            uploaded successfully"}), 200
+    return jsonify({"error": "Invalid request"}), 400 if __name__ == "__main__": app.run(debug=True) ' >> app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+python3 app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+curl http://localhost:5000/ \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+tail -n 50 nohup.out \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+python3 app.py > app_log.txt 2>&1 \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+cat app_log.txt \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+ps aux | grep flask \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+cat app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+ls -l \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+cd Agent99 && ls -l \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+bash \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+ls -l \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+exit && bash \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+rm -rf Agent99 && git clone https://github.com/GaryOcean428/Agent99.git && cd Agent99 && python3 app.py \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+env \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+pkill -u $(whoami) && bash \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
+reset \
+# @@==>> SSHInteractiveSession End-of-Command <<==@@
