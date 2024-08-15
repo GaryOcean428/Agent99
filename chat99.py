@@ -9,66 +9,42 @@ language models and adaptive response strategies.
 
 import os
 import logging
-from typing import List, Dict, Optional
-
-try:
-    import nltk
-    from dotenv import load_dotenv
-    from anthropic import (
-        Anthropic,
-        APIError as AnthropicAPIError,
-        RateLimitError as AnthropicRateLimitError
-    )
-    from groq import Groq, APIError as GroqAPIError, RateLimitError as GroqRateLimitError
-    from rich.console import Console
-    from advanced_router import advanced_router
-    from memory_manager import MemoryManager
-    from search import perform_search
-    from rag import retrieve_relevant_info
-except ImportError as e:
-    print(f"Error importing required modules: {str(e)}")
-    print("Please make sure all required packages are installed.")
-    raise
+import traceback
+import requests
+from typing import List, Dict, Optional, Any  # Add Any to the imports
+from dotenv import load_dotenv
+from anthropic import Anthropic
+from groq import Groq
+from rich.console import Console
+from advanced_router import advanced_router
+from memory_manager import memory_manager
+from search import perform_search
+from rag import retrieve_relevant_info
+from irac_framework import apply_irac_framework, apply_comparative_analysis
 
 # Load environment variables
 load_dotenv()
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-
 logger = logging.getLogger(__name__)
 
 # Set up Rich console
 console = Console()
 
-# Download NLTK data
+# Load configuration
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+HIGH_TIER_MODEL = os.getenv("HIGH_TIER_MODEL", "claude-3-5-sonnet-20240620")
+MID_TIER_MODEL = os.getenv("MID_TIER_MODEL", "llama-3.1-70b-versatile")
+LOW_TIER_MODEL = os.getenv("LOW_TIER_MODEL", "llama-3.1-8b-instant")
+MAX_CONVERSATION_HISTORY = int(os.getenv("MAX_CONVERSATION_HISTORY", "50"))
 
-
-def download_nltk_data():
-    """Download required NLTK data."""
-    try:
-        nltk.download('punkt')
-        nltk.download('averaged_perceptron_tagger')
-        nltk.download('maxent_ne_chunker')
-        nltk.download('words')
-    except Exception as e:
-        logger.error("Error downloading NLTK data: %s", str(e))
-        raise
-
-
-# Initialize NLTK data
-download_nltk_data()
-
-# Initialize MemoryManager
-memory_manager = MemoryManager()
-
-# Define model constants
-HIGH_TIER_MODEL = "claude-3-5-sonnet-20240620"
-MID_TIER_MODEL = "llama-3.1-70b-versatile"
-LOW_TIER_MODEL = "llama-3.1-8b-instant"
+# Initialize API clients
+anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
+groq_client = Groq(api_key=GROQ_API_KEY)
 
 
 def generate_response(
@@ -93,8 +69,7 @@ def generate_response(
     """
     try:
         # Get relevant context from memory and RAG
-        context = memory_manager.get_relevant_context(
-            conversation[-1]["content"])
+        context = memory_manager.get_relevant_context(conversation[-1]["content"])
         rag_info = retrieve_relevant_info(conversation[-1]["content"])
         search_results = perform_search(conversation[-1]["content"])
 
@@ -114,52 +89,44 @@ def generate_response(
 
         # Generate response using the appropriate model
         if model == HIGH_TIER_MODEL:
-            client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-            api_response = client.messages.create(
+            api_response = anthropic_client.messages.create(
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 messages=messages,
             )
             generated_response = api_response.content[0].text
-        elif model in [MID_TIER_MODEL, LOW_TIER_MODEL]:
-            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-            api_response = client.chat.completions.create(
+        else:
+            api_response = groq_client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
             )
             generated_response = api_response.choices[0].message.content
-        else:
-            raise ValueError(f"Invalid model specified: {model}")
 
-        # Update memory with the new interaction
-        if memory_manager:
-            memory_manager.update_memory(
+        # Apply response framework if necessary
+        if response_strategy == "chain_of_thought":
+            generated_response = apply_irac_framework(
+                conversation[-1]["content"], generated_response
+            )
+        elif response_strategy == "comparative_analysis":
+            generated_response = apply_comparative_analysis(
                 conversation[-1]["content"], generated_response
             )
 
+        # Update memory with the new interaction
+        memory_manager.update_memory(conversation[-1]["content"], generated_response)
+
         return generated_response
 
-    except (AnthropicRateLimitError, GroqRateLimitError) as rate_limit_error:
-        logger.error("Rate limit error: %s", str(rate_limit_error))
-        return (
-            "I apologize, but we've reached our API rate limit. "
-            "Please try again in a moment."
-        )
-    except (AnthropicAPIError, GroqAPIError, ValueError) as error:
-        logger.error("API or Value Error: %s", str(error))
-        return (
-            "I'm sorry, but I encountered an error while processing your request. "
-            "Please try again later."
-        )
     except Exception as e:
-        logger.error("Unexpected error in generate_response: %s", str(e))
-        return (
-            "An unexpected error occurred. Please try again or contact support "
-            "if the issue persists."
+        logger.error(
+            "Unexpected error in generate_response: %s\n%s",
+            str(e),
+            traceback.format_exc(),
         )
+        return "An unexpected error occurred. Please try again or contact support if the issue persists."
 
 
 def get_strategy_instruction(strategy: str) -> str:
@@ -173,29 +140,97 @@ def get_strategy_instruction(strategy: str) -> str:
         The instruction for the specified strategy.
     """
     strategies = {
-        "casual_conversation": "Respond in a casual, "
-        "friendly manner without using any specific format.",
-        "chain_of_thought": (
-            "Use a step-by-step reasoning approach. Break down the problem, "
-            "consider relevant information, and explain your thought process clearly."
-        ),
-        "direct_answer": (
-            "Provide a concise, direct answer to the question "
-            "without unnecessary elaboration."
-        ),
-        "boolean_with_explanation": (
-            "Start with a clear Yes or No, then provide a brief explanation "
-            "for your answer."
-        ),
-        "open_discussion": (
-            "Engage in an open-ended discussion, providing insights "
-            "and asking follow-up questions."
-        ),
+        "casual_conversation": "Respond in a casual, friendly manner without using any specific format.",
+        "chain_of_thought": "Use a step-by-step reasoning approach. Break down the problem, consider relevant information, and explain your thought process clearly.",
+        "direct_answer": "Provide a concise, direct answer to the question without unnecessary elaboration.",
+        "boolean_with_explanation": "Start with a clear Yes or No, then provide a brief explanation for your answer.",
+        "open_discussion": "Engage in an open-ended discussion, providing insights and asking follow-up questions.",
+        "comparative_analysis": "Provide a detailed comparison and analysis of the given topics or concepts.",
     }
     return strategies.get(
         strategy,
         "Respond naturally to the query, providing relevant information and insights.",
     )
+
+
+class GitHubManager:
+    def __init__(self):
+        self.base_url = "https://api.github.com"
+        self.token = os.getenv("GITHUB_TOKEN")
+        self.headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+
+    def list_repositories(self) -> List[Dict[str, Any]]:
+        """List repositories for the authenticated user."""
+        response = requests.get(f"{self.base_url}/user/repos", headers=self.headers, timeout=5)
+        response.raise_for_status()
+        return response.json()
+
+    def create_pull_request(
+        self, owner: str, repo: str, title: str, head: str, base: str, body: str
+    ) -> Dict[str, Any]:
+        """Create a pull request."""
+        data = {"title": title, "head": head, "base": base, "body": body}
+        response = requests.post(
+            f"{self.base_url}/repos/{owner}/{repo}/pulls",
+            headers=self.headers,
+            json=data,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def merge_pull_request(
+        self, owner: str, repo: str, pull_number: int
+    ) -> Dict[str, Any]:
+        """Merge a pull request."""
+        response = requests.put(
+            f"{self.base_url}/repos/{owner}/{repo}/pulls/{pull_number}/merge",
+            headers=self.headers,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def cleanup(self):
+        """Cleanup method for GitHubManager."""
+        logger.info("GitHubManager cleanup completed")
+
+    def close(self):
+        """Close method for GitHubManager."""
+        logger.info("GitHubManager closed")
+
+
+github_manager = GitHubManager()
+
+
+def handle_github_commands(user_input: str) -> str:
+    """Handle GitHub-related commands."""
+    if user_input.startswith("list repos"):
+        repos = github_manager.list_repositories()
+        return "Your repositories:\n" + "\n".join([repo["full_name"] for repo in repos])
+
+    elif user_input.startswith("create pr"):
+        # Example: "create pr owner/repo title head base body"
+        parts = user_input.split(maxsplit=6)
+        if len(parts) != 7:
+            return "Invalid command. Use: create pr owner/repo title head base body"
+        _, _, repo, title, head, base, body = parts
+        owner, repo = repo.split("/")
+        pr = github_manager.create_pull_request(owner, repo, title, head, base, body)
+        return f"Pull request created: {pr['html_url']}"
+
+    elif user_input.startswith("merge pr"):
+        # Example: "merge pr owner/repo pull_number"
+        parts = user_input.split()
+        if len(parts) != 4:
+            return "Invalid command. Use: merge pr owner/repo pull_number"
+        _, _, repo, pull_number = parts
+        owner, repo = repo.split("/")
+        result = github_manager.merge_pull_request(owner, repo, int(pull_number))
+        return f"Pull request merged: {result['message']}"
+
+    return "Unknown GitHub command"
 
 
 def chat_with_99(
@@ -217,11 +252,21 @@ def chat_with_99(
     conversation_history.append({"role": "user", "content": user_input})
 
     try:
+        # Check for GitHub commands
+        if user_input.lower().startswith(("list repos", "create pr", "merge pr")):
+            return handle_github_commands(user_input)
+
+        # Check for similar queries in memory
+        similar_query = memory_manager.get_relevant_context(user_input)
+        if similar_query:
+            logger.info("Found similar query in memory")
+            return similar_query
+
         route_config = advanced_router.route(user_input, conversation_history)
-        model = route_config["model"]
-        max_tokens = route_config["max_tokens"]
-        temperature = route_config["temperature"]
-        response_strategy = route_config["response_strategy"]
+        model = route_config.get("model", HIGH_TIER_MODEL)
+        max_tokens = route_config.get("max_tokens", 1024)
+        temperature = route_config.get("temperature", 0.7)
+        response_strategy = route_config.get("response_strategy", "default")
 
         logger.info("Routing decision: %s", route_config)
 
@@ -235,11 +280,10 @@ def chat_with_99(
 
         return generated_response
     except Exception as e:
-        logger.error("An error occurred in chat_with_99: %s", str(e))
-        return (
-            "I'm sorry, but an error occurred while processing your request. "
-            "Please try again later."
+        logger.error(
+            "An error occurred in chat_with_99: %s\n%s", str(e), traceback.format_exc()
         )
+        return "I'm sorry, but an error occurred while processing your request. Please try again later."
 
 
 def display_chat_summary(chat_history: List[Dict[str, str]]) -> None:
@@ -268,8 +312,7 @@ def main() -> None:
     Main function to run the Chat99 assistant.
     """
     console.print(
-        "[bold]Welcome to Chat99! Type 'exit' to end the conversation, "
-        "or 'summary' to see chat history.[/bold]"
+        "[bold]Welcome to Chat99! Type 'exit' to end the conversation, or 'summary' to see chat history.[/bold]"
     )
     chat_history: List[Dict[str, str]] = []
 
@@ -278,17 +321,39 @@ def main() -> None:
 
         if user_message.lower() == "exit":
             console.print(
-                "[bold green]Chat99:[/bold green] Goodbye! "
-                "It was nice chatting with you."
+                "[bold green]Chat99:[/bold green] Goodbye! It was nice chatting with you."
             )
             break
         if user_message.lower() == "summary":
             display_chat_summary(chat_history)
             continue
 
-        response = chat_with_99(user_message, chat_history)
-        console.print(f"[bold green]Chat99:[/bold green] {response}")
+        try:
+            response = chat_with_99(user_message, chat_history)
+            console.print(f"[bold green]Chat99:[/bold green] {response}")
+
+            # Update chat history
+            chat_history.append({"role": "user", "content": user_message})
+            chat_history.append({"role": "assistant", "content": response})
+
+            # Trim conversation history if it exceeds the limit
+            if len(chat_history) > MAX_CONVERSATION_HISTORY:
+                chat_history = chat_history[-MAX_CONVERSATION_HISTORY:]
+        except Exception as e:
+            logger.error(
+                "An unexpected error occurred: %s\n%s", str(e), traceback.format_exc()
+            )
+            console.print(
+                "[bold red]An unexpected error occurred. Please try again.[/bold red]"
+            )
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        memory_manager.cleanup_memory()
+        if hasattr(github_manager, "cleanup"):
+            github_manager.cleanup()
+        if hasattr(github_manager, "close"):
+            github_manager.close()

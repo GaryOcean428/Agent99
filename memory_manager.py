@@ -3,251 +3,318 @@ This module provides a MemoryManager class for managing short-term and long-term
 in a chatbot system, including caching and retrieval of relevant information.
 """
 
-import os
 import logging
-from typing import Dict, List, Optional
 from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+import os
 
-import redis
-from pymongo import MongoClient
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from pymongo import MongoClient, errors as pymongo_errors
+from pymongo.server_api import ServerApi
+import redis
+from dotenv import load_dotenv
+from pinecone import Pinecone, ServerlessSpec
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
+# Load environment variables
+load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Download NLTK data
 nltk.download("punkt", quiet=True)
 nltk.download("stopwords", quiet=True)
 
-logger = logging.getLogger(__name__)
+# Load configuration from environment variables
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
+PINECONE_DIMENSION = int(os.getenv("PINECONE_DIMENSION", "128"))
+MONGO_URI = os.getenv("MONGO_URI")
+MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME")
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+CONFIGURE_THRESHOLD = float(os.getenv("CONFIGURE_THRESHOLD", "0.5"))
 
 
 class MemoryManager:
-    """
-    Manages short-term and long-term memory for a chatbot, including caching and
-    retrieval of relevant information.
-    """
-
     def __init__(self):
         """Initialize the MemoryManager with necessary configurations and connections."""
-        self.api_key = os.getenv("MONGO_DATA_API_KEY")
-        self.api_url = (
-            "https://ap-southeast-2.aws.data.mongodb-api.com/app/"
-            "data-oqozfgx/endpoint/data/v1/action/"
-        )
-        self.headers = {
-            "Content-Type": "application/json",
-            "Access-Control-Request-Headers": "*",
-            "api-key": self.api_key,
-        }
-        self.database = "chat99"
-        self.collection = "long_term_memory"
-        self.data_source = "GaryCluster0"
-
         self.redis_client = self._setup_redis()
         self.mongo_client, self.mongo_db, self.mongo_collection = self._setup_mongodb()
+        self.pinecone_index = self._setup_pinecone()
         self.short_term_memory: List[Dict[str, str]] = []
-        self.vectorizer = TfidfVectorizer()
+        self.vectorizer = TfidfVectorizer(max_features=PINECONE_DIMENSION)
+        self.configure_threshold = CONFIGURE_THRESHOLD
+        self._fit_vectorizer()
 
     def _setup_redis(self) -> Optional[redis.Redis]:
         """Set up and return a Redis client connection."""
-        redis_host = os.getenv("REDIS_HOST", "real-wren-52199.upstash.io")
-        redis_port = int(os.getenv("REDIS_PORT", "6379"))
-        redis_password = os.getenv("REDIS_PASSWORD")
         try:
             redis_client = redis.Redis(
-                host=redis_host,
-                port=redis_port,
-                password=redis_password,
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                password=REDIS_PASSWORD,
                 ssl=True,
                 decode_responses=True,
             )
             redis_client.ping()
+            logger.info("Successfully connected to Redis")
             return redis_client
         except redis.RedisError as e:
             logger.error(
-                "Failed to connect to Redis: %s. Caching will be disabled.", str(
-                    e)
+                "Failed to connect to Redis: %s. Caching will be disabled.", str(e)
             )
             return None
 
     def _setup_mongodb(self):
         """Set up and return a MongoDB client connection."""
-        mongo_uri = os.getenv("MONGO_URI")
-        if mongo_uri and "directConnection=true" in mongo_uri:
-            mongo_uri = mongo_uri.replace("directConnection=true", "")
-            if mongo_uri.endswith("&"):
-                mongo_uri = mongo_uri[:-1]
+        try:
+            mongo_client = MongoClient(MONGO_URI, server_api=ServerApi("1"))
+            mongo_client.admin.command("ping")
+            mongo_db = mongo_client[MONGODB_DB_NAME]
+            mongo_collection = mongo_db["long_term_memory"]
+            # Ensure a text index exists
+            mongo_collection.create_index(
+                [("user_input", "text"), ("response", "text")]
+            )
+            logger.info("Successfully connected to MongoDB")
+            return mongo_client, mongo_db, mongo_collection
+        except pymongo_errors.PyMongoError as e:
+            logger.error("An error occurred while setting up MongoDB: %s", str(e))
+            return None, None, None
 
-        if mongo_uri:
-            try:
-                mongo_client = MongoClient(
-                    mongo_uri, server_api=ServerApi('1'))
-                mongo_db = mongo_client[self.database]
-                mongo_collection = mongo_db[self.collection]
-                return mongo_client, mongo_db, mongo_collection
-            except MongoClient.errors.ConnectionFailure as e:
-                logger.error("Error connecting to MongoDB: %s", str(e))
-        return None, None, None
+    def _setup_pinecone(self):
+        """Set up and return a Pinecone index."""
+        try:
+            pc = Pinecone(api_key=PINECONE_API_KEY)
+            # Check if the index exists
+            if PINECONE_INDEX_NAME not in [
+                idx.name for idx in pc.list_indexes().indexes
+            ]:
+                pc.create_index(
+                    name=PINECONE_INDEX_NAME,
+                    dimension=PINECONE_DIMENSION,
+                    metric="cosine",
+                    spec=ServerlessSpec(
+                        cloud="aws",
+                        region=PINECONE_ENVIRONMENT,
+                    ),
+                )
+            index = pc.Index(PINECONE_INDEX_NAME)
+            logger.info(
+                f"Successfully connected to Pinecone index: {PINECONE_INDEX_NAME}"
+            )
+            return index
+        except Exception as e:
+            logger.error("An error occurred while setting up Pinecone: %s", str(e))
+            return None
 
-    def add_to_short_term(self, message: Dict[str, str]):
-        """Add a message to short-term memory, removing oldest if limit is reached."""
-        self.short_term_memory.append(message)
-        if len(self.short_term_memory) > 10:  # Adjust as needed
-            self.short_term_memory.pop(0)
+    def _fit_vectorizer(self):
+        """Fit the TF-IDF vectorizer with initial data."""
+        initial_data = ["example text for vectorizer fitting"]
+        self.vectorizer.fit(initial_data)
 
     def update_memory(self, user_input: str, response: str):
-        """Update both short-term and long-term memory with new interaction."""
-        self.add_to_short_term({"role": "user", "content": user_input})
-        self.add_to_short_term({"role": "assistant", "content": response})
-
-        topic = self._extract_topic(user_input + " " + response)
-        summary = self._generate_summary(user_input, response)
-        self._update_long_term_memory(topic, summary)
-
-        if self.redis_client:
-            try:
-                self.redis_client.setex(
-                    f"{user_input}_last_response", 3600, response)
-            except redis.RedisError as e:
-                logger.error("Redis error: %s", str(e))
-
-    def get_relevant_context(self, user_input: str) -> str:
         """
-        Retrieve relevant context based on user input from both short-term and long-term memory.
+        Update the memory with the latest interaction.
+
+        Args:
+            user_input (str): The user's input.
+            response (str): The chatbot's response.
         """
-        relevant_info = []
-        key_words = self._extract_key_words(user_input)
-        for message in reversed(self.short_term_memory):
-            if any(word in message["content"].lower() for word in key_words):
-                relevant_info.append(message["content"])
+        # Update short-term memory
+        self.short_term_memory.append({"user_input": user_input, "response": response})
+        if (
+            len(self.short_term_memory) > 10
+        ):  # Limit short-term memory to last 10 interactions
+            self.short_term_memory.pop(0)
 
+        # Index the interaction in Pinecone and MongoDB for long-term memory
+        if self.pinecone_index is not None:
+            self.index_in_pinecone(user_input, response)
+        if self.mongo_collection is not None:
+            self.store_in_mongodb(user_input, response)
+
+    def index_in_pinecone(self, user_input: str, response: str):
+        """
+        Index the interaction in Pinecone for fast retrieval.
+
+        Args:
+            user_input (str): The user's input.
+            response (str): The chatbot's response.
+        """
         try:
-            long_term_memories = self._get_long_term_memories(
-                user_input, limit=5)
-            for memory in long_term_memories:
-                topic = memory.get("topic", "Unknown")
-                summary = memory.get("summary", "No summary available")
-                relevant_info.append(f"Topic: {topic}, Content: {summary}")
-        except MongoClient.errors.OperationFailure as e:
-            logger.error("Error retrieving long-term memories: %s", str(e))
+            vector = self.vectorizer.transform([user_input]).toarray()[0].tolist()
+            id = str(datetime.now().timestamp())
+            self.pinecone_index.upsert(vectors=[(id, vector, {"response": response})])
+            logger.info("Indexed interaction in Pinecone")
+        except Exception as e:
+            logger.error("An error occurred while indexing in Pinecone: %s", str(e))
 
-        if any(
-            phrase in user_input.lower()
-            for phrase in [
-                "what else",
-                "what have we discussed",
-                "what did we talk about",
-            ]
-        ):
-            recap = self._generate_conversation_recap()
-            relevant_info.append(f"Conversation Recap: {recap}")
+    def store_in_mongodb(self, user_input: str, response: str):
+        """
+        Store the interaction in MongoDB for long-term memory.
 
-        return ". ".join(relevant_info)
-
-    def get_cached_response(self, user_input: str) -> str:
-        """Retrieve cached response for the given user input."""
-        if self.redis_client:
-            try:
-                return self.redis_client.get(f"{user_input}_last_response") or ""
-            except redis.RedisError as e:
-                logger.error("Redis error: %s", str(e))
-        return ""
-
-    def determine_complexity(self, user_input: str) -> str:
-        """Determine the complexity of the user input."""
-        word_count = len(user_input.split())
-        if word_count > 50 or any(
-            word in user_input.lower() for word in ["complex", "difficult", "advanced"]
-        ):
-            return "high"
-        elif word_count > 20:
-            return "mid"
-        else:
-            return "low"
-
-    def _extract_key_words(self, text: str) -> List[str]:
-        """Extract key words from the given text, removing stop words."""
-        stop_words = set(stopwords.words("english"))
-        word_tokens = word_tokenize(text.lower())
-        return [
-            word for word in word_tokens if word not in stop_words and word.isalnum()
-        ]
-
-    def _update_long_term_memory(self, topic: str, summary: str):
-        """Update long-term memory with new topic and summary."""
-        if self.mongo_collection:
-            try:
-                self.mongo_collection.insert_one(
-                    {
-                        "topic": topic,
-                        "summary": summary,
-                        "timestamp": datetime.now(),
-                        "relevance": 1.0,
-                    }
-                )
-            except MongoClient.errors.WriteError as e:
-                logger.error("Error updating long-term memory: %s", str(e))
-
-    def _get_long_term_memories(self, query: str, limit: int = 5) -> List[Dict]:
-        """Retrieve relevant long-term memories based on the query."""
-        if self.mongo_collection is None or self.vectorizer is None:
-            logger.error("MongoDB collection or vectorizer is not initialized")
-            return []
-
+        Args:
+            user_input (str): The user's input.
+            response (str): The chatbot's response.
+        """
         try:
-            all_memories = list(
-                self.mongo_collection.find().sort("timestamp", -1).limit(100)
+            document = {
+                "user_input": user_input,
+                "response": response,
+                "timestamp": datetime.now(),
+                "expiry": datetime.now() + timedelta(days=90),
+            }
+            self.mongo_collection.insert_one(document)
+            logger.info("Stored interaction in MongoDB")
+        except pymongo_errors.PyMongoError as e:
+            logger.error(
+                "An error occurred while storing interaction in MongoDB: %s", str(e)
             )
 
-            if not all_memories:
-                return []
+    def get_relevant_context(self, query: str) -> Optional[str]:
+        """
+        Retrieve relevant context from memory based on the query.
 
-            memory_texts = [
-                f"{m.get('topic', '')} {m.get('summary', '')}" for m in all_memories
-            ]
-            query_vector = self.vectorizer.fit_transform([query])
-            memory_vectors = self.vectorizer.transform(memory_texts)
+        Args:
+            query (str): The user's query.
 
-            similarities = cosine_similarity(
-                query_vector, memory_vectors).flatten()
-            top_indices = similarities.argsort()[-limit:][::-1]
+        Returns:
+            Optional[str]: The most relevant context, if found.
+        """
+        # Search in short-term memory first
+        for interaction in reversed(self.short_term_memory):
+            if query in interaction["user_input"]:
+                return interaction["response"]
 
-            return [all_memories[i] for i in top_indices]
-        except MongoClient.errors.OperationFailure as e:
-            logger.error("Error retrieving long-term memories: %s", str(e))
-            return []
+        # If not found, search in Pinecone and MongoDB
+        if self.pinecone_index is not None:
+            pinecone_results = self._search_pinecone(query)
+            if pinecone_results is not None:
+                return pinecone_results
 
-    def _extract_topic(self, text: str) -> str:
-        """Extract a topic from the given text."""
-        words = self._extract_key_words(text)
-        return " ".join(words[:3])  # Use top 3 keywords as topic
+        if self.mongo_collection is not None:
+            mongo_results = self._search_mongodb(query)
+            if mongo_results is not None:
+                return mongo_results
 
-    def _generate_summary(self, user_input: str, response: str) -> str:
-        """Generate a summary of the user input and response."""
-        combined = user_input + " " + response
-        return combined[:200] + "..." if len(combined) > 200 else combined
+        return None
 
-    def _generate_conversation_recap(self) -> str:
-        """Generate a recap of the conversation topics."""
-        topics = set()
-        for memory in self.short_term_memory + self._get_long_term_memories(
-            "", limit=10
-        ):
-            topics.add(memory.get("topic", ""))
-        return f"We've discussed these topics: {', '.join(topics)}"
+    def _search_pinecone(self, query: str) -> Optional[str]:
+        """
+        Search for relevant context in Pinecone.
+
+        Args:
+            query (str): The user's query.
+
+        Returns:
+            Optional[str]: The most relevant response, if found.
+        """
+        try:
+            vector = self.vectorizer.transform([query]).toarray()[0].tolist()
+            results = self.pinecone_index.query(
+                vector=vector, top_k=1, include_metadata=True
+            )
+            if results.matches:
+                return results.matches[0].metadata["response"]
+        except Exception as e:
+            logger.error("An error occurred while searching Pinecone: %s", str(e))
+        return None
+
+    def _search_mongodb(self, query: str) -> Optional[str]:
+        """
+        Search for relevant context in MongoDB.
+
+        Args:
+            query (str): The user's query.
+
+        Returns:
+            Optional[str]: The most relevant response, if found.
+        """
+        try:
+            documents = (
+                self.mongo_collection.find(
+                    {"$text": {"$search": query}}, {"score": {"$meta": "textScore"}}
+                )
+                .sort([("score", {"$meta": "textScore"})])
+                .limit(1)
+            )
+            for doc in documents:
+                return doc["response"]
+        except pymongo_errors.PyMongoError as e:
+            logger.error("An error occurred while searching MongoDB: %s", str(e))
+        return None
 
     def cleanup_memory(self):
-        """Clean up old memories from long-term storage."""
-        if self.mongo_collection:
-            try:
-                cutoff_date = datetime.now() - timedelta(days=30)  # Adjust as needed
-                self.mongo_collection.delete_many(
-                    {"timestamp": {"$lt": cutoff_date}})
-            except MongoClient.errors.OperationFailure as e:
-                logger.error("Error cleaning up memory: %s", str(e))
+        """Clean up expired memory from MongoDB."""
+        try:
+            self.mongo_collection.delete_many({"expiry": {"$lt": datetime.now()}})
+            logger.info("Cleaned up expired memory from MongoDB")
+        except pymongo_errors.PyMongoError as e:
+            logger.error("An error occurred while cleaning up MongoDB: %s", str(e))
+
+    def delete_memory_by_query(self, query: str):
+        """
+        Delete specific memory entries based on a query.
+
+        Args:
+            query (str): The query to match the memory entries for deletion.
+        """
+        try:
+            self.mongo_collection.delete_many(
+                {"user_input": {"$regex": query, "$options": "i"}}
+            )
+            logger.info("Deleted memory entries matching query: %s", query)
+        except pymongo_errors.PyMongoError as e:
+            logger.error("An error occurred while deleting memory by query: %s", str(e))
+
+    def get_all_memory(self) -> List[Dict[str, str]]:
+        """
+        Retrieve all stored memories from MongoDB.
+
+        Returns:
+            List[Dict[str, str]]: A list of all memories.
+        """
+        try:
+            documents = self.mongo_collection.find({})
+            all_memories = [
+                {
+                    "user_input": doc["user_input"],
+                    "response": doc["response"],
+                    "timestamp": doc["timestamp"],
+                }
+                for doc in documents
+            ]
+            logger.info("Retrieved all memory entries")
+            return all_memories
+        except pymongo_errors.PyMongoError as e:
+            logger.error(
+                "An error occurred while retrieving all memory entries: %s", str(e)
+            )
+            return []
+
+    def get_memory_count(self) -> int:
+        """
+        Get the count of all stored memory entries in MongoDB.
+
+        Returns:
+            int: The count of memory entries.
+        """
+        try:
+            count = self.mongo_collection.count_documents({})
+            logger.info("Memory count retrieved: %d", count)
+            return count
+        except pymongo_errors.PyMongoError as e:
+            logger.error("An error occurred while retrieving memory count: %s", str(e))
+            return 0
 
 
+# Instantiate the MemoryManager
 memory_manager = MemoryManager()
