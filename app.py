@@ -4,14 +4,14 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
 # Define the upload folder
-UPLOAD_FOLDER = /path/to/the/uploads
+UPLOAD_FOLDER = "./uploads"
 app.config[UPLOAD_FOLDER] = UPLOAD_FOLDER
 
 # Define allowed file extensions
 ALLOWED_EXTENSIONS = {txt, pdf, png, jpg, jpeg, gif}
 
 def allowed_file(filename):
-    return . in filename and filename.rsplit(., 1).lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS
 
 @app.route(/upload, methods=[POST])
 def upload_file():
