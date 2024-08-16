@@ -26,3 +26,5 @@ dnspython
 google-auth-httplib2
 httplib2
 uritemplate
+Flask
+Werkzeug

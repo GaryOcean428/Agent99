@@ -30,6 +30,7 @@ charset-normalizer==3.3.2
     # via requests
 click==8.1.7
     # via
+    #   flask
     #   nltk
     #   uvicorn
 cryptography==43.0.0
@@ -52,6 +53,8 @@ filelock==3.15.4
     #   torch
     #   transformers
     #   triton
+flask==2.0.1
+    # via -r requirements.in
 fsspec==2024.6.1
     # via
     #   huggingface-hub
@@ -98,8 +101,12 @@ idna==3.7
     #   anyio
     #   httpx
     #   requests
+itsdangerous==2.2.0
+    # via flask
 jinja2==3.1.4
-    # via torch
+    # via
+    #   flask
+    #   torch
 jiter==0.5.0
     # via anthropic
 joblib==1.4.2
@@ -303,6 +310,10 @@ urllib3==2.2.2
     #   requests
 uvicorn==0.30.6
     # via -r requirements.in
+werkzeug==2.0.1
+    # via
+    #   -r requirements.in
+    #   flask
 wrapt==1.16.0
     # via deprecated
 

@@ -10,12 +10,15 @@ language models and adaptive response strategies.
 import os
 import logging
 import traceback
-import requests
-from typing import List, Dict, Optional, Any  # Add Any to the imports
+from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
 from anthropic import Anthropic
 from groq import Groq
 from rich.console import Console
+from rich.panel import Panel
+from rich.markdown import Markdown
+import requests
+
 from advanced_router import advanced_router
 from memory_manager import memory_manager
 from search import perform_search
@@ -56,16 +59,6 @@ def generate_response(
 ) -> str:
     """
     Generate a response using the specified model and parameters.
-
-    Args:
-        model: The model to use for generating the response.
-        conversation: The conversation history.
-        max_tokens: The maximum number of tokens to generate.
-        temperature: The temperature for response generation.
-        response_strategy: The strategy to use for generating the response.
-
-    Returns:
-        The generated response.
     """
     try:
         # Get relevant context from memory and RAG
@@ -132,12 +125,6 @@ def generate_response(
 def get_strategy_instruction(strategy: str) -> str:
     """
     Get the instruction for the specified response strategy.
-
-    Args:
-        strategy: The response strategy to use.
-
-    Returns:
-        The instruction for the specified strategy.
     """
     strategies = {
         "casual_conversation": "Respond in a casual, friendly manner without using any specific format.",
@@ -164,7 +151,9 @@ class GitHubManager:
 
     def list_repositories(self) -> List[Dict[str, Any]]:
         """List repositories for the authenticated user."""
-        response = requests.get(f"{self.base_url}/user/repos", headers=self.headers, timeout=5)
+        response = requests.get(
+            f"{self.base_url}/user/repos", headers=self.headers, timeout=5
+        )
         response.raise_for_status()
         return response.json()
 
@@ -236,16 +225,6 @@ def handle_github_commands(user_input: str) -> str:
 def chat_with_99(
     user_input: str, conversation_history: Optional[List[Dict[str, str]]] = None
 ) -> str:
-    """
-    Process user input and generate a response using the Chat99 system.
-
-    Args:
-        user_input: The user's input message.
-        conversation_history: The conversation history.
-
-    Returns:
-        The generated response from the Chat99 system.
-    """
     if conversation_history is None:
         conversation_history = []
 
@@ -269,6 +248,11 @@ def chat_with_99(
         response_strategy = route_config.get("response_strategy", "default")
 
         logger.info("Routing decision: %s", route_config)
+        console.print(
+            Panel(
+                f"[bold cyan]Model: {model}[/bold cyan]\n[bold yellow]Strategy: {response_strategy}[/bold yellow]"
+            )
+        )
 
         generated_response = generate_response(
             model, conversation_history, max_tokens, temperature, response_strategy
@@ -289,9 +273,6 @@ def chat_with_99(
 def display_chat_summary(chat_history: List[Dict[str, str]]) -> None:
     """
     Display a summary of the chat history.
-
-    Args:
-        chat_history: The complete chat history.
     """
     console.print("\n[bold]Chat Summary:[/bold]")
     for entry in chat_history:
@@ -308,9 +289,6 @@ def display_chat_summary(chat_history: List[Dict[str, str]]) -> None:
 
 
 def main() -> None:
-    """
-    Main function to run the Chat99 assistant.
-    """
     console.print(
         "[bold]Welcome to Chat99! Type 'exit' to end the conversation, or 'summary' to see chat history.[/bold]"
     )
@@ -330,7 +308,12 @@ def main() -> None:
 
         try:
             response = chat_with_99(user_message, chat_history)
-            console.print(f"[bold green]Chat99:[/bold green] {response}")
+            console.print(
+                Panel(
+                    Markdown(f"[bold green]Chat99:[/bold green] {response}"),
+                    expand=False,
+                )
+            )
 
             # Update chat history
             chat_history.append({"role": "user", "content": user_message})
