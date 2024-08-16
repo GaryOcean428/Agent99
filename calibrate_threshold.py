@@ -5,7 +5,7 @@ Calibration script to find the optimal threshold for the AdvancedRouter in Chat9
 import argparse
 import json
 from typing import List, Dict
-from advanced_router import AdvancedRouter
+from advanced_router import advanced_router
 
 
 def load_sample_queries(file_path: str) -> List[Dict[str, str]]:
@@ -15,23 +15,27 @@ def load_sample_queries(file_path: str) -> List[Dict[str, str]]:
 
 
 def calibrate_threshold(
-    router: AdvancedRouter, queries: List[Dict[str, str]], target_strong_pct: float
+    router: advanced_router, queries: List[Dict[str, str]], target_strong_pct: float
 ) -> float:
     """
     Calibrate the complexity threshold for the AdvancedRouter.
     """
-    complexities = [router.determine_complexity(
-        query["content"]) for query in queries]
+    complexities = [router._assess_complexity(query["content"]) for query in queries]
     strong_model_calls = sum(
-        1 for complexity in complexities if complexity == "high")
+        1 for complexity in complexities if complexity >= router.threshold
+    )
     actual_strong_pct = strong_model_calls / len(queries)
 
     if actual_strong_pct < target_strong_pct:
-        return 0.7  # Lower threshold to increase strong model usage
+        return min(
+            router.threshold * 0.9, 0.9
+        )  # Lower threshold to increase strong model usage
     elif actual_strong_pct > target_strong_pct:
-        return 0.3  # Raise threshold to decrease strong model usage
+        return max(
+            router.threshold * 1.1, 0.1
+        )  # Raise threshold to decrease strong model usage
     else:
-        return 0.5  # Keep current threshold
+        return router.threshold  # Keep current threshold
 
 
 def main():
@@ -61,12 +65,11 @@ def main():
     # Load sample queries
     sample_queries = load_sample_queries(args.sample_queries)
 
-    # Set up AdvancedRouter
-    router = AdvancedRouter()
+    # Use the existing AdvancedRouter instance
+    router = advanced_router
 
     # Calibrate threshold
-    threshold = calibrate_threshold(
-        router, sample_queries, args.strong_model_pct)
+    threshold = calibrate_threshold(router, sample_queries, args.strong_model_pct)
 
     print(
         f"Optimal threshold for {args.strong_model_pct*100}% strong model calls: {threshold}"

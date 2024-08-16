@@ -13,7 +13,7 @@ def apply_irac_framework(query: str, response: str) -> str:
     issue = f"Issue: {query}\n\n"
 
     # Split the response into paragraphs
-    paragraphs = response.split('\n\n')
+    paragraphs = response.split("\n\n")
 
     # Attempt to identify the rule, application, and conclusion
     rule = "Rule: "
@@ -44,12 +44,15 @@ def apply_comparative_analysis(query: str, response: str) -> str:
     introduction = f"Analysis of: {query}\n\n"
 
     # Split the response into paragraphs
-    paragraphs = response.split('\n\n')
+    paragraphs = response.split("\n\n")
 
     # Attempt to identify key points of comparison
     comparison_points = []
     for paragraph in paragraphs:
-        if re.match(r'^(Comparing|On one hand|On the other hand|In contrast|Similarly)', paragraph):
+        if re.match(
+            r"^(Comparing|On one hand|On the other hand|In contrast|Similarly)",
+            paragraph,
+        ):
             comparison_points.append(paragraph)
 
     # If we couldn't identify clear comparison points, use all paragraphs
@@ -61,5 +64,6 @@ def apply_comparative_analysis(query: str, response: str) -> str:
     conclusion = f"\n\nConclusion: {paragraphs[-1] if len(paragraphs) > 1 else ''}"
 
     return introduction + body + conclusion
+
 
 # Add more helper functions for other response strategies as needed

@@ -62,8 +62,7 @@ class AdvancedRouter:
             question_type, task_type
         )
 
-        config = self._adjust_params_based_on_history(
-            config, conversation_history)
+        config = self._adjust_params_based_on_history(config, conversation_history)
 
         logger.info("Routing decision: %s", config)
         return config
