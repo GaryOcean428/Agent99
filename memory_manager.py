@@ -127,15 +127,32 @@ class MemoryManager:
     def add_to_long_term_memory(self, text: str):
         """Add a text string to long-term memory using Pinecone."""
         vector = self._get_embedding(text)
-        self.pinecone_index.upsert(vectors=[(text, vector)])
+        if self.pinecone_index:
+            try:
+                self.pinecone_index.upsert(vectors=[(text, vector)])
+                logger.info("Successfully added to Pinecone long-term memory.")
+            except Exception as e:
+                logger.error("An error occurred while adding to Pinecone: %s", str(e))
 
     def query_long_term_memory(self, query: str, top_k: int = 5):
         """Query long-term memory in Pinecone using the provided query."""
-        query_vector = self._get_embedding(query)
-        results = self.pinecone_index.query(
-            query_vector, top_k=top_k, include_metadata=True
-        )
-        return results
+        if self.pinecone_index:
+            try:
+                query_vector = self._get_embedding(query)
+                results = self.pinecone_index.query(
+                    query_vector, top_k=top_k, include_metadata=True
+                )
+                if "matches" in results:
+                    return results["matches"]
+                else:
+                    logger.warning("No matches found in Pinecone query results.")
+                    return []
+            except Exception as e:
+                logger.error("An error occurred while querying Pinecone: %s", str(e))
+                return []
+        else:
+            logger.error("Pinecone index is not set up.")
+            return []
 
     def update_memory(self, user_input: str, response: str):
         """Update the memory with the latest interaction."""
@@ -203,7 +220,7 @@ class MemoryManager:
             results = self.pinecone_index.query(
                 vector=vector, top_k=1, include_metadata=True
             )
-            if results["matches"]:
+            if results.get("matches"):
                 return results["matches"][0]["metadata"]["response"]
         except Exception as e:
             logger.error("An error occurred while searching Pinecone: %s", str(e))

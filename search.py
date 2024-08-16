@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 
 # Load your API key and Custom Search Engine ID from environment variables
 API_KEY = os.getenv("GOOGLE_API_KEY")
-SEARCH_ENGINE_ID = os.getenv("SEARCH_ENGINE_ID")
+SEARCH_ENGINE_ID = os.getenv(
+    "GOOGLE_CSE_ID"
+)  # Updated to match your environment variable
 
 
 def google_search(query: str, num_results: int = 5) -> List[Dict[str, str]]:

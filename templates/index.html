@@ -34,8 +34,8 @@
             border: 2px solid #cbb26a;
             border-radius: 8px;
             height: 400px;
-            width: 100%;
-            max-width: 800px;
+            width: 75%; /* Increased the width by a third */
+            max-width: 1000px;
             overflow-y: scroll;
             padding: 20px;
             margin-bottom: 20px;
@@ -43,7 +43,7 @@
         }
 
         #user-input {
-            width: calc(100% - 130px);
+            width: calc(100% - 130px); /* Adjusted to be as wide as the chat box */
             padding: 10px;
             border: 2px solid #cbb26a;
             border-radius: 4px;
@@ -67,8 +67,7 @@
 
         #file-upload {
             margin-top: 20px;
-            width: 100%;
-            max-width: 800px;
+            width: 75%; /* Match chat box width */
             background-color: #ffffff;
             border: 2px solid #cbb26a;
             border-radius: 8px;
@@ -104,11 +103,12 @@
     </style>
 </head>
 <body>
-    <img src="/static/images/500x160 Gold Logo.png" alt="Braden Logo" class="logo">
-    <h1>Braden Chat99</h1>
+    <h1>Chat99</h1>
     <div id="chat-container"></div>
-    <input type="text" id="user-input" placeholder="Type your message...">
-    <button id="send-btn">Send</button>
+    <div style="display: flex; width: 75%;"> <!-- Flex container for input and button -->
+        <input type="text" id="user-input" placeholder="Type your message..." style="flex: 1;">
+        <button id="send-btn">Send</button>
+    </div>
     
     <div id="file-upload">
         <h2>Upload File</h2>
