@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 API_KEY = os.getenv("GOOGLE_API_KEY")
 SEARCH_ENGINE_ID = os.getenv(
     "GOOGLE_CSE_ID"
-)  # Updated to match your environment variable
+)  # Ensure this matches your environment variable
 
 
 def google_search(query: str, num_results: int = 5) -> List[Dict[str, str]]:
@@ -34,6 +34,7 @@ def google_search(query: str, num_results: int = 5) -> List[Dict[str, str]]:
 
     try:
         service = build("customsearch", "v1", developerKey=API_KEY)
+        logger.debug(f"Making API request with query: {query}")
         res = (
             service.cse().list(q=query, cx=SEARCH_ENGINE_ID, num=num_results).execute()
         )
@@ -54,6 +55,7 @@ def google_search(query: str, num_results: int = 5) -> List[Dict[str, str]]:
         return results
     except HttpError as e:
         logger.error(f"An error occurred during the Google search: {str(e)}")
+        logger.debug(f"Request URL: {service._baseUrl}")  # Log the final URL used
         return []
 
 
