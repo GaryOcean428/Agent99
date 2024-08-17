@@ -220,8 +220,10 @@ class MemoryManager:
             results = self.pinecone_index.query(
                 vector=vector, top_k=1, include_metadata=True
             )
-            if results.get("matches"):
+            if "matches" in results and results["matches"]:
                 return results["matches"][0]["metadata"]["response"]
+            else:
+                logger.warning("No matches found in Pinecone query results.")
         except Exception as e:
             logger.error("An error occurred while searching Pinecone: %s", str(e))
         return None
