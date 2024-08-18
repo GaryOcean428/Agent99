@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import List, Dict, Optional
+from typing import Optional
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -17,7 +17,7 @@ SEARCH_ENGINE_ID = os.getenv(
 )  # Ensure this matches your environment variable
 
 
-def google_search(query: str, num_results: int = 5) -> List[Dict[str, str]]:
+def perform_search(query: str, num_results: int = 5) -> str:
     """
     Perform a Google search using the Custom Search API.
 
@@ -26,62 +26,30 @@ def google_search(query: str, num_results: int = 5) -> List[Dict[str, str]]:
         num_results (int): The number of search results to return. Default is 5.
 
     Returns:
-        List[Dict[str, str]]: A list of dictionaries containing search results.
+        str: A formatted string of search results, or an error message.
     """
     if not API_KEY or not SEARCH_ENGINE_ID:
         logger.error("Google API key or Search Engine ID is missing")
-        return []
+        return "Error: Missing API key or Search Engine ID."
 
     try:
         service = build("customsearch", "v1", developerKey=API_KEY)
-        logger.debug(f"Making API request with query: {query}")
         res = (
             service.cse().list(q=query, cx=SEARCH_ENGINE_ID, num=num_results).execute()
         )
 
-        results = []
+        search_results = []
         for item in res.get("items", []):
-            results.append(
-                {
-                    "title": item["title"],
-                    "link": item["link"],
-                    "snippet": item["snippet"],
-                }
+            search_results.append(
+                f"Title: {item['title']}\nLink: {item['link']}\nSnippet: {item['snippet']}\n"
             )
 
-        logger.info(
-            f"Successfully retrieved {len(results)} search results for query: {query}"
+        return (
+            "\n".join(search_results) if search_results else "No search results found."
         )
-        return results
     except HttpError as e:
         logger.error(f"An error occurred during the Google search: {str(e)}")
-        logger.debug(f"Request URL: {service._baseUrl}")  # Log the final URL used
-        return []
-
-
-def perform_search(query: str) -> Optional[str]:
-    """
-    Perform a web search and return the results as a formatted string.
-
-    Args:
-        query (str): The search query.
-
-    Returns:
-        Optional[str]: A formatted string of search results, or None if the search failed.
-    """
-    search_results = google_search(query)
-    if not search_results:
-        logger.warning(f"No search results found for query: {query}")
-        return None
-
-    formatted_results = "Search Results:\n"
-    for i, result in enumerate(search_results, 1):
-        formatted_results += (
-            f"{i}. {result['title']}\n   {result['link']}\n   {result['snippet']}\n\n"
-        )
-
-    logger.info(f"Formatted search results for query: {query}")
-    return formatted_results
+        return "Error performing search."
 
 
 if __name__ == "__main__":

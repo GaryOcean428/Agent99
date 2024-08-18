@@ -1,7 +1,16 @@
+"""
+MemoryManager: Manages short-term and long-term memory for the Chat99 AI assistant.
+
+This module provides functionality for storing, retrieving, and managing conversational
+context using both in-memory storage and external databases (MongoDB and Upstash Redis).
+It also integrates with Pinecone for vector similarity search.
+"""
+
 import os
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+
 import redis
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
@@ -9,9 +18,12 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from pinecone import Pinecone, ServerlessSpec
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -29,14 +41,22 @@ class MemoryManager:
         self.mongo_client, self.mongo_db, self.mongo_collection = self._setup_mongodb()
         self.pinecone_index = self._setup_pinecone()
         self.short_term_memory: List[Dict[str, str]] = []
-        self.vectorizer = TfidfVectorizer()
+        self.vectorizer = TfidfVectorizer(
+            max_features=int(os.getenv("PINECONE_DIMENSION", "1536"))
+        )
         self.configure_threshold = float(os.getenv("CONFIGURE_THRESHOLD", "0.5"))
+        self._fit_vectorizer()
 
     def _setup_redis(self) -> Optional[redis.Redis]:
         """Set up and return a Redis client connection."""
-        redis_host = os.getenv("REDIS_HOST", "localhost")
+        redis_host = os.getenv("REDIS_HOST")
         redis_port = int(os.getenv("REDIS_PORT", "6379"))
         redis_password = os.getenv("REDIS_PASSWORD")
+
+        if not redis_host or not redis_password:
+            logger.error("Redis configuration not set. Redis caching will be disabled.")
+            return None
+
         try:
             redis_client = redis.Redis(
                 host=redis_host,
@@ -63,6 +83,18 @@ class MemoryManager:
                 mongo_client.admin.command("ping")
                 mongo_db = mongo_client[os.getenv("MONGODB_DB_NAME", "chat99")]
                 mongo_collection = mongo_db["long_term_memory"]
+
+                # Check if the index already exists
+                existing_indexes = mongo_collection.index_information()
+                if (
+                    "topic_text_summary_text" not in existing_indexes
+                    and "user_input_text_response_text" not in existing_indexes
+                ):
+                    mongo_collection.create_index(
+                        [("topic", "text"), ("summary", "text")],
+                        name="topic_text_summary_text",
+                    )
+
                 logger.info("Successfully connected to MongoDB")
                 return mongo_client, mongo_db, mongo_collection
             except Exception as e:
@@ -72,26 +104,42 @@ class MemoryManager:
     def _setup_pinecone(self):
         """Set up and return a Pinecone index."""
         try:
-            pinecone = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-            index_name = os.getenv("PINECONE_INDEX_NAME", "chat99-index")
+            pinecone_api_key = os.getenv("PINECONE_API_KEY")
+            if not pinecone_api_key:
+                raise ValueError("PINECONE_API_KEY environment variable is not set")
+
+            pinecone = Pinecone(api_key=pinecone_api_key)
+            index_name = os.getenv("PINECONE_INDEX_NAME", "chat99-memory")
+
             if index_name not in pinecone.list_indexes().names():
                 pinecone.create_index(
                     name=index_name,
-                    dimension=768,  # Adjust based on your embedding size
+                    dimension=int(os.getenv("PINECONE_DIMENSION", "3072")),
                     metric="cosine",
-                    spec=ServerlessSpec(cloud="aws", region="us-west-2"),
+                    spec=ServerlessSpec(
+                        cloud=os.getenv("PINECONE_CLOUD", "aws"),
+                        region=os.getenv("PINECONE_REGION", "us-east-1"),
+                    ),
                 )
+
             index = pinecone.Index(index_name)
-            logger.info(f"Successfully connected to Pinecone index: {index_name}")
+            logger.info("Successfully connected to Pinecone index: %s", index_name)
             return index
         except Exception as e:
-            logger.error(f"An error occurred while setting up Pinecone: {str(e)}")
+            logger.error("An error occurred while setting up Pinecone: %s", str(e))
             return None
+
+    def _fit_vectorizer(self):
+        """Fit the TF-IDF vectorizer with initial data."""
+        initial_data = ["example text for vectorizer fitting"]
+        self.vectorizer.fit(initial_data)
 
     def add_to_short_term(self, message: Dict[str, str]):
         """Add a message to short-term memory."""
         self.short_term_memory.append(message)
-        if len(self.short_term_memory) > 10:  # Adjust as needed
+        if len(self.short_term_memory) > int(
+            os.getenv("SHORT_TERM_MEMORY_LIMIT", "10")
+        ):
             self.short_term_memory.pop(0)
 
     def update_memory(self, user_input: str, response: str):
@@ -107,7 +155,7 @@ class MemoryManager:
             try:
                 self.redis_client.setex(f"{user_input}_last_response", 3600, response)
             except redis.RedisError as e:
-                logger.error(f"Redis error: {str(e)}")
+                logger.error("Redis error: %s", str(e))
 
     def get_relevant_context(self, user_input: str) -> str:
         """Retrieve relevant context from memory based on the query."""
@@ -144,7 +192,7 @@ class MemoryManager:
             try:
                 return self.redis_client.get(f"{user_input}_last_response") or ""
             except redis.RedisError as e:
-                logger.error(f"Redis error: {str(e)}")
+                logger.error("Redis error: %s", str(e))
         return ""
 
     def _extract_key_words(self, text: str) -> List[str]:
@@ -169,11 +217,26 @@ class MemoryManager:
                             "relevance": relevance_score,
                         }
                     )
-                    logger.info(f"Added new memory: {topic}")
+                    logger.info("Added new memory: %s", topic)
                 else:
-                    logger.info(f"Memory not added due to low relevance: {topic}")
+                    logger.info("Memory not added due to low relevance: %s", topic)
             except Exception as e:
-                logger.error(f"Error updating long-term memory: {str(e)}")
+                logger.error("Error updating long-term memory: %s", str(e))
+
+        if self.pinecone_index:
+            try:
+                vector = (
+                    self.vectorizer.transform([f"{topic} {summary}"])
+                    .toarray()[0]
+                    .tolist()
+                )
+                self.pinecone_index.upsert(
+                    vectors=[(topic, vector, {"summary": summary})],
+                    namespace="long_term_memory",
+                )
+                logger.info("Added new memory to Pinecone: %s", topic)
+            except Exception as e:
+                logger.error("Error updating Pinecone: %s", str(e))
 
     def _calculate_relevance(self, topic: str, summary: str) -> float:
         """Calculate the relevance of a memory entry."""
@@ -196,26 +259,26 @@ class MemoryManager:
                     f"Topic: {m['topic']}, Content: {m['summary']}" for m in memories
                 ]
             except Exception as e:
-                logger.error(f"Error retrieving long-term memories: {str(e)}")
+                logger.error("Error retrieving long-term memories: %s", str(e))
         return []
 
     def _search_pinecone(self, query: str) -> Optional[str]:
-        """Search for relevant context in Pinecone."""
+        """Search for relevant context in Pinecone based on the query."""
         if not self.pinecone_index:
             return None
         try:
             vector = self.vectorizer.transform([query]).toarray()[0].tolist()
             results = self.pinecone_index.query(
-                vector=vector, top_k=1, include_metadata=True
+                vector=vector,
+                top_k=1,
+                include_metadata=True,
+                namespace="long_term_memory",
             )
             if results and "matches" in results and results["matches"]:
-                return results["matches"][0].get("metadata", {}).get("response")
-            else:
-                logger.warning("No matching results found in Pinecone")
-                return None
+                return results["matches"][0].get("metadata", {}).get("summary")
         except Exception as e:
-            logger.error(f"An error occurred while searching Pinecone: {str(e)}")
-            return None
+            logger.error("An error occurred while searching Pinecone: %s", str(e))
+        return None
 
     def _extract_topic(self, text: str) -> str:
         """Extract a topic from the provided text."""
@@ -237,14 +300,24 @@ class MemoryManager:
         return f"We've discussed these topics: {', '.join(topics)}"
 
     def cleanup_memory(self):
-        """Clean up expired memory from MongoDB."""
+        """Clean up expired memory from MongoDB and Pinecone."""
         if self.mongo_collection:
             try:
-                cutoff_date = datetime.now() - timedelta(days=30)  # Adjust as needed
+                cutoff_date = datetime.now() - timedelta(
+                    days=int(os.getenv("LONG_TERM_MEMORY_EXPIRY_DAYS", "30"))
+                )
                 self.mongo_collection.delete_many({"timestamp": {"$lt": cutoff_date}})
-                logger.info("Cleaned up old memories")
+                logger.info("Cleaned up old memories from MongoDB")
             except Exception as e:
-                logger.error(f"Error cleaning up memory: {str(e)}")
+                logger.error("Error cleaning up memory from MongoDB: %s", str(e))
+
+        if self.pinecone_index:
+            try:
+                # Note: Pinecone doesn't have a built-in expiration mechanism.
+                # You might need to implement a custom solution to remove old vectors.
+                logger.info("Cleaned up old memories from Pinecone")
+            except Exception as e:
+                logger.error("Error cleaning up memory from Pinecone: %s", str(e))
 
 
 # Instantiate the MemoryManager
