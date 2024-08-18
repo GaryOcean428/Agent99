@@ -44,6 +44,10 @@ class AdvancedRouter:
         task_type = self._identify_task_type(query)
         question_type = self._classify_question(query)
 
+        # Handle simple queries
+        if task_type == "casual":
+            return self._get_casual_config()
+
         if complexity < self.threshold / 2 and context_length < 1000:
             config = self._get_low_tier_config(task_type)
         elif complexity < self.threshold and context_length < 4000:
@@ -176,6 +180,21 @@ class AdvancedRouter:
             "open_ended": "open_discussion",
         }
         return strategy_map.get(question_type, "default")
+
+    def _get_casual_config(self) -> Dict[str, Any]:
+        """
+        Get configuration for casual task processing.
+
+        Returns:
+            Dict[str, Any]: Configuration for casual task.
+        """
+        return {
+            "model": self.models["low"],
+            "max_tokens": 50,
+            "temperature": 0.7,
+            "response_strategy": "casual_conversation",
+            "routing_explanation": "Simple greeting detected, using low-tier model for quick response.",
+        }
 
     def _get_low_tier_config(self, task_type: str) -> Dict[str, Any]:
         """

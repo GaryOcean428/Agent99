@@ -6,9 +6,7 @@ from advanced_router import advanced_router
 from chat99 import generate_response
 
 app = Flask(__name__)
-app.secret_key = os.getenv(
-    "FLASK_SECRET_KEY"
-)  # generate key by using import secrets, preint(secrets.token_hex(16)),
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key")
 
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
@@ -34,7 +32,18 @@ def chat():
         session["conversation"] = []
 
     session["conversation"].append({"role": "user", "content": user_input})
-    response = generate_response(user_input, session["conversation"])
+
+    # Use the integrated generate_response function
+    response = generate_response(
+        model=advanced_router.route(user_input, session["conversation"]).get(
+            "model", os.getenv("HIGH_TIER_MODEL", "claude-3-5-sonnet-20240620")
+        ),
+        conversation=session["conversation"],
+        max_tokens=1024,
+        temperature=0.7,
+        response_strategy="default",
+    )
+
     session["conversation"].append({"role": "assistant", "content": response})
 
     # Limit conversation history to last 10 messages

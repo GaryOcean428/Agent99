@@ -1,12 +1,3 @@
-"""
-chat99.py: Main module for the Chat99 AI assistant.
-
-This module integrates various components including advanced routing,
-memory management, retrieval-augmented generation (RAG), and web search
-to provide a sophisticated chatbot experience. It supports multiple
-language models and adaptive response strategies.
-"""
-
 import os
 import logging
 import traceback
@@ -18,12 +9,21 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 import requests
-
 from advanced_router import advanced_router
 from memory_manager import memory_manager
 from search import perform_search
 from rag import retrieve_relevant_info
 from irac_framework import apply_irac_framework, apply_comparative_analysis
+
+"""
+chat99.py: Main module for the Chat99 AI assistant.
+
+This module integrates various components including advanced routing,
+memory management, retrieval-augmented generation (RAG), and web search
+to provide a sophisticated chatbot experience. It supports multiple
+language models and adaptive response strategies.
+"""
+
 
 # Load environment variables
 load_dotenv()
@@ -57,9 +57,6 @@ def generate_response(
     temperature: float = 0.7,
     response_strategy: str = "default",
 ) -> str:
-    """
-    Generate a response using the specified model and parameters.
-    """
     try:
         # Get relevant context from memory and RAG
         context = memory_manager.get_relevant_context(conversation[-1]["content"])
@@ -89,7 +86,7 @@ def generate_response(
                 messages=messages,
             )
             generated_response = api_response.content[0].text
-        else:
+        elif model in [MID_TIER_MODEL, LOW_TIER_MODEL]:
             api_response = groq_client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -97,27 +94,15 @@ def generate_response(
                 temperature=temperature,
             )
             generated_response = api_response.choices[0].message.content
-
-        # Apply response framework if necessary
-        if response_strategy == "chain_of_thought":
-            generated_response = apply_irac_framework(
-                conversation[-1]["content"], generated_response
-            )
-        elif response_strategy == "comparative_analysis":
-            generated_response = apply_comparative_analysis(
-                conversation[-1]["content"], generated_response
-            )
-
-        # Update memory with the new interaction
-        memory_manager.update_memory(conversation[-1]["content"], generated_response)
+        else:
+            logger.error(f"Invalid model specified: {model}")
+            return "I'm sorry, but I encountered an error while processing your request. Please try again."
 
         return generated_response
 
     except Exception as e:
         logger.error(
-            "Unexpected error in generate_response: %s\n%s",
-            str(e),
-            traceback.format_exc(),
+            f"Unexpected error in generate_response: {str(e)}\n{traceback.format_exc()}"
         )
         return "An unexpected error occurred. Please try again or contact support if the issue persists."
 
@@ -166,6 +151,7 @@ class GitHubManager:
             f"{self.base_url}/repos/{owner}/{repo}/pulls",
             headers=self.headers,
             json=data,
+            timeout=5,
         )
         response.raise_for_status()
         return response.json()
@@ -177,6 +163,7 @@ class GitHubManager:
         response = requests.put(
             f"{self.base_url}/repos/{owner}/{repo}/pulls/{pull_number}/merge",
             headers=self.headers,
+            timeout=5,
         )
         response.raise_for_status()
         return response.json()
