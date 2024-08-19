@@ -205,7 +205,7 @@ class MemoryManager:
 
     def _update_long_term_memory(self, topic: str, summary: str):
         """Update the long-term memory with a new entry."""
-        if self.mongo_collection:
+        if self.mongo_collection is not None:
             try:
                 relevance_score = self._calculate_relevance(topic, summary)
                 if relevance_score >= self.configure_threshold:
@@ -246,7 +246,7 @@ class MemoryManager:
 
     def _get_long_term_memories(self, query: str, limit: int = 5) -> List[str]:
         """Retrieve long-term memories from MongoDB based on a query."""
-        if self.mongo_collection:
+        if self.mongo_collection is not None:
             try:
                 memories = list(
                     self.mongo_collection.find(
@@ -301,7 +301,7 @@ class MemoryManager:
 
     def cleanup_memory(self):
         """Clean up expired memory from MongoDB and Pinecone."""
-        if self.mongo_collection:
+        if self.mongo_collection is not None:
             try:
                 cutoff_date = datetime.now() - timedelta(
                     days=int(os.getenv("LONG_TERM_MEMORY_EXPIRY_DAYS", "30"))
