@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from werkzeug.utils import secure_filename
 import os
 from memory_manager import memory_manager
@@ -23,6 +23,12 @@ def index():
     if "conversation" not in session:
         session["conversation"] = []
     return render_template("index.html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, "static"),
+                               "favicon.svg", mimetype="image/svg+xml")
 
 
 @app.route("/chat", methods=["POST"])
