@@ -256,7 +256,8 @@ class MemoryManager:
                     .limit(limit)
                 )
                 return [
-                    f"Topic: {m['topic']}, Content: {m['summary']}" for m in memories
+                    f"Topic: {m.get('topic', 'Unknown')}, Content: {m.get('summary', 'No summary available')}"
+                    for m in memories
                 ]
             except Exception as e:
                 logger.error("Error retrieving long-term memories: %s", str(e))
@@ -293,10 +294,11 @@ class MemoryManager:
     def _generate_conversation_recap(self) -> str:
         """Generate a recap of the conversation."""
         topics = set()
-        for memory in self.short_term_memory + self._get_long_term_memories(
-            "", limit=10
-        ):
+        for memory in self.short_term_memory:
             topics.add(memory.get("topic", ""))
+        long_term_memories = self._get_long_term_memories("", limit=10)
+        for memory in long_term_memories:
+            topics.add(memory.split(",")[0].split(":")[1].strip())
         return f"We've discussed these topics: {', '.join(topics)}"
 
     def cleanup_memory(self):

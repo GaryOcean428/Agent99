@@ -26,23 +26,20 @@ Agent99, as a project name, is a loose call back to the 60's comedy show "Get Sm
 
 1. Clone the repository:
 
-- Dynamic model selection using RouteLLM
-- Advanced memory management for context retention
-- Support for multiple AI models (Claude, GPT-4, etc.)
-- Calibration tool for optimizing model selection thresholds
-- Local model support using Ollama   ```
-   git clone <https://github.com/GaryOcean428/Agent99.git>
+   ```
+   git clone https://github.com/GaryOcean428/Agent99.git
    cd Agent99
+   ```
 
-1. Install the required dependencies:
+2. Install the required dependencies:
 
-   ```Markdown
+   ```
    pip install -r requirements.txt
    ```
 
-2. Set up your environment variables by copying the `.env.template` file to `.env` and filling in your API keys:
+3. Set up your environment variables by copying the `.env.template` file to `.env` and filling in your API keys:
 
-   ```Markdown
+   ```
    cp .env.template .env
    ```
 
@@ -52,17 +49,45 @@ Agent99, as a project name, is a loose call back to the 60's comedy show "Get Sm
 
 1. Run the calibration script to find the optimal threshold for model selection:
 
-   ``````Markdown
+   ```
    python calibrate_threshold.py --sample-queries sample_queries.json --router mf --strong-model-pct 0.5
    ```
 
 2. Start the Chat99 assistant:
 
-   ``````Markdown
+   ```
    python main.py --use-dynamic-routing --router mf --threshold <threshold_from_calibration>
    ```
 
+## Running with Docker
+
+To run the project using Docker, follow these steps:
+
+1. Make sure you have Docker and Docker Compose installed on your system.
+
+2. Build and run the Docker container:
+
+   ```
+   docker-compose up --build
+   ```
+
+   This command will build the Docker image and start the container.
+
+3. Access the application by opening a web browser and navigating to `http://localhost:5000`.
+
+4. To stop the container, press Ctrl+C in the terminal where docker-compose is running, or run:
+
+   ```
+   docker-compose down
+   ```
+
 ## How to Contribute
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Chat99
 
@@ -80,20 +105,20 @@ Chat99 is an intelligent AI assistant with advanced memory, multi-model capabili
 
 1. Clone the repository:
 
-   ```Markdown
+   ```
    git clone https://github.com/GaryOcean428/Agent99.git
    cd Agent99
    ```
 
 2. Install the required dependencies:
 
-   ```Markdown
+   ```
    pip install -r requirements.txt
    ```
 
 3. Set up your environment variables by copying the `.env.template` file to `.env` and filling in your API keys:
 
-   ```Markdown
+   ```
    cp .env.template .env
    ```
 
@@ -103,13 +128,13 @@ Chat99 is an intelligent AI assistant with advanced memory, multi-model capabili
 
 1. Run the calibration script to find the optimal threshold for model selection:
 
-   ```Markdown
+   ```
    python calibrate_threshold.py --sample-queries sample_queries.json --strong-model-pct 0.5
    ```
 
 2. Start the Chat99 assistant:
 
-   ```Markdown
+   ```
    python chat99.py
    ```
 
@@ -149,11 +174,5 @@ Chat99 is an intelligent AI assistant with advanced memory, multi-model capabili
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License Information
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

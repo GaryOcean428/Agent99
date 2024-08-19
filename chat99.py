@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 import requests
+from flask import Flask, jsonify
 from advanced_router import advanced_router
 from memory_manager import memory_manager
 from search import perform_search
@@ -49,6 +50,12 @@ MAX_CONVERSATION_HISTORY = int(os.getenv("MAX_CONVERSATION_HISTORY", "50"))
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
 
+# Initialize Flask app
+app = Flask(__name__)
+
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy"}), 200
 
 def generate_response(
     model: str,
@@ -320,7 +327,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     try:
-        main()
+        app.run(host='0.0.0.0', port=5000)
     finally:
         memory_manager.cleanup_memory()
         if hasattr(github_manager, "cleanup"):
