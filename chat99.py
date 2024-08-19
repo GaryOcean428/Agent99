@@ -48,7 +48,13 @@ MAX_CONVERSATION_HISTORY = int(os.getenv("MAX_CONVERSATION_HISTORY", "50"))
 
 # Initialize API clients
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
-groq_client = Groq(api_key=GROQ_API_KEY)
+
+# Initialize Groq client with error handling
+if GROQ_API_KEY:
+    groq_client = Groq(api_key=GROQ_API_KEY)
+else:
+    logger.warning("GROQ_API_KEY is not set. Groq functionality will be limited.")
+    groq_client = None
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -65,10 +71,16 @@ def generate_response(
     response_strategy: str = "default",
 ) -> str:
     try:
+        # Get the latest user input
+        user_input = conversation[-1]["content"]
+
+        # Check if search is needed
+        need_search = should_perform_search(user_input)
+
         # Get relevant context from memory and RAG
-        context = memory_manager.get_relevant_context(conversation[-1]["content"])
-        rag_info = retrieve_relevant_info(conversation[-1]["content"])
-        search_results = perform_search(conversation[-1]["content"])
+        context = memory_manager.get_relevant_context(user_input)
+        rag_info = retrieve_relevant_info(user_input)
+        search_results = perform_search(user_input) if need_search else ""
 
         # Prepare messages for API call
         messages = conversation.copy()
@@ -94,13 +106,17 @@ def generate_response(
             )
             generated_response = api_response.content[0].text
         elif model in [MID_TIER_MODEL, LOW_TIER_MODEL]:
-            api_response = groq_client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-            generated_response = api_response.choices[0].message.content
+            if groq_client:
+                api_response = groq_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                generated_response = api_response.choices[0].message.content
+            else:
+                logger.error("Groq client is not initialized. Cannot use Groq models.")
+                return "I'm sorry, but I'm currently unable to use Groq models. Please try again later or use a different model."
         else:
             logger.error(f"Invalid model specified: {model}")
             return "I'm sorry, but I encountered an error while processing your request. Please try again."
@@ -113,6 +129,26 @@ def generate_response(
         )
         return "An unexpected error occurred. Please try again or contact support if the issue persists."
 
+def should_perform_search(user_input: str) -> bool:
+    """
+    Determine if a search should be performed based on the user input.
+    """
+    # List of common greetings and short phrases that don't require a search
+    no_search_phrases = ['hello', 'hi', 'hey', 'greetings', 'how are you', 'what\'s up']
+    
+    # Convert input to lowercase for case-insensitive comparison
+    lower_input = user_input.lower()
+
+    # Check if the input is a greeting or short phrase
+    if any(phrase in lower_input for phrase in no_search_phrases):
+        return False
+
+    # Check if the input is too short (e.g., less than 3 words)
+    if len(user_input.split()) < 3:
+        return False
+
+    # If none of the above conditions are met, perform a search
+    return True
 
 def get_strategy_instruction(strategy: str) -> str:
     """
