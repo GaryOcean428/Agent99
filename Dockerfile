@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
@@ -16,5 +18,10 @@ EXPOSE 5000
 # Define environment variable
 ENV FLASK_APP=chat99.py
 
-# Run app.py when the container launches
-CMD ["flask", "run", "--host=0.0.0.0"]
+# Print debug information and run the Flask app
+CMD echo "Current directory:" && \
+    pwd && \
+    echo "Directory contents:" && \
+    ls -la && \
+    echo "Starting Flask app..." && \
+    flask run --host=0.0.0.0
