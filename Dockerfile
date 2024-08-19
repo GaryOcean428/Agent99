@@ -21,14 +21,5 @@ EXPOSE 5000
 # Define environment variable
 ENV FLASK_APP=chat99.py
 
-# Print debug information, environment variables, and run the Flask app
-CMD echo "Current directory:" && \
-    pwd && \
-    echo "Directory contents:" && \
-    ls -la && \
-    echo "Environment variables:" && \
-    env | grep GROQ_API_KEY && \
-    echo "Contents of .env file:" && \
-    cat .env && \
-    echo "Starting Flask app..." && \
-    flask run --host=0.0.0.0
+# Print debug information and run the Flask app using JSON format
+CMD ["sh", "-c", "echo 'Current directory:' && pwd && echo 'Directory contents:' && ls -la && echo 'Environment variables:' && env | grep GROQ_API_KEY && echo 'Contents of .env file:' && cat .env && echo 'Starting Flask app...' && flask run --host=0.0.0.0 --port=5000"]

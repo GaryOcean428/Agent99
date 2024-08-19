@@ -3,172 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat99</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <title>Monkey Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: 'Open Sans', sans-serif;
-            background-color: #f5f5f5;
-            color: #2c3e50;
+            font-family: Arial, sans-serif;
+            background-color: #f5f2e8;
             margin: 0;
             padding: 0;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            background-image: url('/static/images/background.png');
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+            margin: 20px auto;
+        }
+        .chat-container {
+            height: calc(100vh - 200px);
+            display: flex;
+        }
+        .past-chats {
+            width: 250px;
+            background-color: #e0d8c0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .chat-area {
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-image: url("/static/images/background.png");
-            background-size: cover;
-        }
-
-        h1 {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            color: #ab233a;
-            margin-bottom: 20px;
-        }
-
-        #chat-container {
-            background-color: #ffffff;
-            border: 2px solid #cbb26a;
-            border-radius: 8px;
-            height: 400px;
-            width: 75%; /* Increased the width by a third */
-            max-width: 1000px;
-            overflow-y: scroll;
             padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
         }
-
-        #user-input {
-            width: calc(100% - 130px); /* Adjusted to be as wide as the chat box */
+        #chat-box {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 5px;
             padding: 10px;
-            border: 2px solid #cbb26a;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-
-        #send-btn {
-            padding: 10px 20px;
-            background-color: #ab233a;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-
-        #send-btn:hover {
-            background-color: #811a2c;
-        }
-
-        #file-upload {
-            margin-top: 20px;
-            width: 75%; /* Match chat box width */
+            margin-bottom: 10px;
+            overflow-y: auto;
             background-color: #ffffff;
-            border: 2px solid #cbb26a;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
         }
-
-        #upload-btn {
-            padding: 10px 20px;
-            background-color: #ab233a;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
+        #user-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .file-upload {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .options {
+            display: flex;
+            justify-content: space-between;
             margin-top: 10px;
         }
-
-        #upload-btn:hover {
-            background-color: #811a2c;
+        .btn-primary {
+            background-color: #8b4513;
+            border-color: #8b4513;
         }
-
-        label {
-            font-weight: 600;
-        }
-
-        /* Add specific logo style here */
-        .logo {
-            width: 150px;
-            height: auto;
-            margin-bottom: 20px;
+        .btn-primary:hover {
+            background-color: #6b3611;
+            border-color: #6b3611;
         }
     </style>
 </head>
 <body>
-    <h1>Chat99</h1>
-    <div id="chat-container"></div>
-    <div style="display: flex; width: 75%;"> <!-- Flex container for input and button -->
-        <input type="text" id="user-input" placeholder="Type your message..." style="flex: 1;">
-        <button id="send-btn">Send</button>
-    </div>
-    
-    <div id="file-upload">
-        <h2>Upload File</h2>
-        <label for="file-input">Choose a file:</label>
-        <input type="file" id="file-input">
-        <button id="upload-btn">Upload</button>
+    <div class="container-fluid">
+        <div class="logo"></div>
+        <h1 class="text-center">Monkey Chat</h1>
+        <div class="file-upload">
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                <label for="file" class="form-label">Upload File:</label>
+                <input type="file" name="file" id="file" class="form-control" aria-label="File upload">
+                <button type="submit" class="btn btn-primary mt-2" aria-label="Upload file">Upload</button>
+            </form>
+        </div>
+        <div class="chat-container">
+            <div class="past-chats" id="past-chats">
+                <h3>Past Chats</h3>
+                <!-- Past chats will be dynamically added here -->
+            </div>
+            <div class="chat-area">
+                <div id="chat-box" aria-live="polite" aria-label="Chat messages"></div>
+                <label for="user-input" class="visually-hidden">Type your message</label>
+                <input type="text" id="user-input" placeholder="Type your message..." aria-label="Type your message">
+                <div class="options">
+                    <button class="btn btn-primary" onclick="sendMessage('chat')" aria-label="Send chat message">Chat</button>
+                    <button class="btn btn-primary" onclick="sendMessage('upsert-project')" aria-label="Upsert to project">Upsert to Project</button>
+                    <button class="btn btn-primary" onclick="sendMessage('upsert-all')" aria-label="Upsert to all chats">Upsert to All Chats</button>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        $(document).ready(function() {
-            function appendMessage(sender, message) {
-                $('#chat-container').append(`<p><strong>${sender}:</strong> ${message}</p>`);
-                $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+        function sendMessage(action) {
+            var userInput = $('#user-input').val();
+            if (userInput.trim() !== '') {
+                appendMessage('You', userInput);
+                $.ajax({
+                    url: '/chat',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({message: userInput, action: action}),
+                    success: function(response) {
+                        appendMessage('Monkey Chat', response.response);
+                        $('#user-input').val('');
+                        updatePastChats(userInput);
+                    }
+                });
             }
+        }
 
-            $('#send-btn').click(function() {
-                var userInput = $('#user-input').val();
-                if (userInput.trim() !== '') {
-                    appendMessage('You', userInput);
-                    $.ajax({
-                        url: '/chat',
-                        method: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({message: userInput}),
-                        success: function(response) {
-                            appendMessage('Chat99', response.response);
-                        }
-                    });
-                    $('#user-input').val('');
-                }
-            });
+        function appendMessage(sender, message) {
+            $('#chat-box').append(`<p><strong>${sender}:</strong> ${message}</p>`);
+            $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+        }
 
-            $('#user-input').keypress(function(e) {
-                if (e.which == 13) {
-                    $('#send-btn').click();
-                }
-            });
+        function updatePastChats(message) {
+            $('#past-chats').append(`<p>${message}</p>`);
+        }
 
-            $('#upload-btn').click(function() {
-                var fileInput = $('#file-input')[0];
-                if (fileInput.files.length > 0) {
-                    var formData = new FormData();
-                    formData.append('file', fileInput.files[0]);
-                    $.ajax({
-                        url: '/upload',
-                        method: 'POST',
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        success: function(response) {
-                            alert(response.message);
-                        },
-                        error: function(xhr, status, error) {
-                            alert('Error uploading file: ' + error);
-                        }
-                    });
-                } else {
-                    alert('Please select a file to upload');
-                }
-            });
+        $('#user-input').keypress(function(e) {
+            if (e.which == 13) {
+                sendMessage('chat');
+            }
         });
     </script>
 </body>
