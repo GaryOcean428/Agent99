@@ -19,8 +19,8 @@ from irac_framework import apply_irac_framework, apply_comparative_analysis
 from pinecone import Pinecone, ServerlessSpec
 from langchain_community.document_loaders import TextLoader, PDFMinerLoader, Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_community.vectorstores import Pinecone as LangchainPinecone
+from langchain_openai import OpenAIEmbeddings
+from langchain_pinecone import PineconeVectorStore
 from langchain.chains.question_answering import load_qa_chain
 from langchain_community.llms import OpenAI
 
@@ -68,15 +68,15 @@ else:
 
 # Initialize Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
-index_name = "chat99-index"
+index_name = "flowise"
 if index_name not in pc.list_indexes().names():
     pc.create_index(
         name=index_name,
-        dimension=1536,  # OpenAI embeddings dimension
+        dimension=3072,
         metric='cosine',
         spec=ServerlessSpec(
-            cloud=PINECONE_ENVIRONMENT.split('-')[0],  # 'aws' or 'gcp'
-            region=PINECONE_ENVIRONMENT.split('-', 1)[1]  # e.g., 'us-west1'
+            cloud='aws',
+            region='us-east-1'
         )
     )
 vector_db = pc.Index(index_name)
@@ -85,7 +85,7 @@ vector_db = pc.Index(index_name)
 embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 
 # Initialize LangChain Pinecone vectorstore
-vectorstore = LangchainPinecone(index=vector_db, embedding_function=embeddings.embed_query, text_key="text")
+vectorstore = PineconeVectorStore(index=vector_db, embedding=embeddings, text_key="text")
 
 # Initialize Flask app
 app = Flask(__name__)
