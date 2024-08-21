@@ -61,7 +61,6 @@ pymongo
 pynacl
 pyparsing
 python-dateutil
-python-dotenv
 pyyaml
 redis
 regex
@@ -79,6 +78,7 @@ streamlit
 sympy
 threadpoolctl
 tokenizers
+toml
 torch
 tqdm
 transformers
