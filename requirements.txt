@@ -75,6 +75,7 @@ sentence-transformers
 six
 sniffio
 starlette
+streamlit
 sympy
 threadpoolctl
 tokenizers
