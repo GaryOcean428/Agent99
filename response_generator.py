@@ -1,17 +1,16 @@
+"""
+This module handles the generation of responses using various AI models.
+"""
+
 import os
-from typing import List, Dict, Any
-from anthropic import Anthropic
+import logging
+from typing import List, Dict
+from anthropic import Anthropic, APIError, APIConnectionError, AuthenticationError, RateLimitError
 from groq import Groq
 from input_analyzer import analyze_input
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-import logging
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Initialize API clients
@@ -20,6 +19,8 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 class ModelManager:
+    """Manages different AI models and handles response generation."""
+
     def __init__(self):
         self.models = {
             "low": "llama-3.1-8b-instant",
@@ -60,18 +61,10 @@ class ModelManager:
                 messages=messages,
             )
             return response.content[0].text
-        except Anthropic.APIError as e:
-            logger.error(f"Anthropic API error: {str(e)}")
-        except Anthropic.APIConnectionError as e:
-            logger.error(f"Anthropic API connection error: {str(e)}")
-        except Anthropic.AuthenticationError:
-            logger.error("Anthropic authentication error: Please check your API key.")
-        except Anthropic.RateLimitError:
-            logger.error("Anthropic rate limit exceeded: Please try again later.")
-        except Anthropic.APIStatusError as e:
-            logger.error(f"Anthropic API status error: {str(e)}")
+        except (APIError, APIConnectionError, AuthenticationError, RateLimitError) as e:
+            logger.error("Anthropic API error: %s", str(e))
         except Exception as e:
-            logger.error(f"Unexpected error with Anthropic API: {str(e)}")
+            logger.error("Unexpected error with Anthropic API: %s", str(e))
         return ""
 
     def _call_groq_api(
@@ -91,7 +84,7 @@ class ModelManager:
             )
             return response.choices[0].message.content
         except Exception as e:
-            logger.error(f"Error with Groq API: {str(e)}")
+            logger.error("Error with Groq API: %s", str(e))
         return ""
 
     def generate_response(
@@ -117,7 +110,7 @@ class ModelManager:
         """
         model = self.models.get(model_tier)
         if not model:
-            logger.error(f"Invalid model tier: {model_tier}")
+            logger.error("Invalid model tier: %s", model_tier)
             return ""
 
         user_input = messages[-1]["content"]
@@ -130,6 +123,36 @@ class ModelManager:
             )
         else:
             return self._call_groq_api(model, messages, max_tokens, temperature)
+
+
+class ResponseGenerator:
+    """Generates responses using the ModelManager."""
+
+    def __init__(self, config, memory_manager):
+        self.config = config
+        self.memory_manager = memory_manager
+        self.model_manager = ModelManager()
+
+    def generate(self, analyzed_input):
+        """
+        Generate a response based on the analyzed input.
+
+        Args:
+            analyzed_input (str): The analyzed user input.
+
+        Returns:
+            str: The generated response.
+        """
+        system_prompt = "You are a helpful AI assistant."
+        messages = [{"role": "user", "content": analyzed_input}]
+        response = self.model_manager.generate_response(
+            model_tier="mid",
+            system_prompt=system_prompt,
+            messages=messages,
+            max_tokens=100,
+            temperature=0.7,
+        )
+        return response if response else "I'm sorry, I couldn't generate a response at this time."
 
 
 model_manager = ModelManager()

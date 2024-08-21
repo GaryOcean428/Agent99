@@ -14,8 +14,8 @@ from config import Config
 
 # Initialize components
 config = Config()
-model_manager = GroqModelManager(config)
-memory_manager = MemoryManager(config)
+model_manager = GroqModelManager()
+memory_manager = MemoryManager()
 input_analyzer = InputAnalyzer(config)
 response_generator = ResponseGenerator(config, memory_manager)
 

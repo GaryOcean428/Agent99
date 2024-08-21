@@ -1,0 +1,45 @@
+# Configuration for Chat99 project
+
+[api_keys]
+ANTHROPIC_API_KEY = ""
+GROQ_API_KEY = ""
+GOOGLE_API_KEY = ""
+GITHUB_TOKEN = ""
+
+[model_settings]
+HIGH_TIER_MODEL = "claude-3-5-sonnet-20240620"
+MID_TIER_MODEL = "llama-3.1-70b-versatile"
+LOW_TIER_MODEL = "llama-3.1-8b-instant"
+
+[router_settings]
+ROUTER_THRESHOLD = 0.7
+
+[memory_settings]
+MAX_SHORT_TERM_MEMORY = 10
+LONG_TERM_MEMORY_EXPIRY_DAYS = 90
+
+[mongodb_settings]
+MONGO_URI = ""
+MONGODB_DB_NAME = "chat99"
+
+[redis_settings]
+REDIS_HOST = "real-wren-52199.upstash.io"
+REDIS_PORT = 6379
+REDIS_PASSWORD = ""
+
+[search_settings]
+SEARCH_ENGINE_ID = ""
+
+[logging]
+DEBUG = false
+LOG_LEVEL = "INFO"
+
+[application_settings]
+MAX_CONVERSATION_HISTORY = 50
+CONFIGURE_THRESHOLD = 0.5
+
+[pinecone_settings]
+PINECONE_API_KEY = ""
+PINECONE_ENVIRONMENT = ""
+PINECONE_INDEX_NAME = ""
+PINECONE_DIMENSION = 128
