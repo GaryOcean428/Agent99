@@ -5,9 +5,11 @@ This module handles the generation of responses using various AI models.
 import os
 import logging
 from typing import List, Dict
-from anthropic import Anthropic, APIError, APIConnectionError, AuthenticationError, RateLimitError
+from anthropic import (
+    Anthropic, APIError, APIConnectionError, AuthenticationError, RateLimitError
+)
 from groq import Groq
-from input_analyzer import analyze_input
+from input_analyzer import InputAnalyzer
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -36,11 +38,22 @@ class ModelManager:
         5. Draw conclusions or provide a step-by-step explanation
         6. Summarize the response
         """
+        self.input_analyzer = InputAnalyzer(None)  # Passing None as config for now
 
     def _prepare_prompt(self, system_prompt: str, input_type: str) -> str:
-        """Prepare the system prompt based on input type."""
+        """
+        Prepare the system prompt based on input type.
+
+        Args:
+            system_prompt (str): The base system prompt.
+            input_type (str): The type of input (simple or complex).
+
+        Returns:
+            str: The prepared system prompt.
+        """
         if input_type == "complex":
-            return f"{system_prompt}\n\nFor complex queries, follow this thought process:\n{self.thought_process}"
+            return (f"{system_prompt}\n\nFor complex queries, "
+                    f"follow this thought process:\n{self.thought_process}")
         return system_prompt
 
     def _call_anthropic_api(
@@ -51,7 +64,19 @@ class ModelManager:
         max_tokens: int,
         temperature: float,
     ) -> str:
-        """Call the Anthropic API and handle potential errors."""
+        """
+        Call the Anthropic API and handle potential errors.
+
+        Args:
+            model (str): The model to use for generation.
+            system_prompt (str): The system prompt to guide the AI's behavior.
+            messages (List[Dict[str, str]]): The conversation history.
+            max_tokens (int): The maximum number of tokens in the response.
+            temperature (float): The randomness of the response.
+
+        Returns:
+            str: The generated response from the Anthropic API.
+        """
         try:
             response = anthropic_client.messages.create(
                 model=model,
@@ -74,7 +99,18 @@ class ModelManager:
         max_tokens: int,
         temperature: float,
     ) -> str:
-        """Call the Groq API and handle potential errors."""
+        """
+        Call the Groq API and handle potential errors.
+
+        Args:
+            model (str): The model to use for generation.
+            messages (List[Dict[str, str]]): The conversation history.
+            max_tokens (int): The maximum number of tokens in the response.
+            temperature (float): The randomness of the response.
+
+        Returns:
+            str: The generated response from the Groq API.
+        """
         try:
             response = groq_client.chat.completions.create(
                 model=model,
@@ -114,37 +150,45 @@ class ModelManager:
             return ""
 
         user_input = messages[-1]["content"]
-        input_type = analyze_input(user_input)
+        input_type = self.input_analyzer.analyze(user_input)
         prepared_prompt = self._prepare_prompt(system_prompt, input_type)
 
         if model_tier == "superior":
             return self._call_anthropic_api(
                 model, prepared_prompt, messages, max_tokens, temperature
             )
-        else:
-            return self._call_groq_api(model, messages, max_tokens, temperature)
+        return self._call_groq_api(model, messages, max_tokens, temperature)
 
 
 class ResponseGenerator:
     """Generates responses using the ModelManager."""
 
     def __init__(self, config, memory_manager):
+        """
+        Initialize the ResponseGenerator.
+
+        Args:
+            config: Configuration object containing settings.
+            memory_manager: Memory manager object for handling conversation history.
+        """
         self.config = config
         self.memory_manager = memory_manager
         self.model_manager = ModelManager()
+        self.input_analyzer = InputAnalyzer(config)
 
-    def generate(self, analyzed_input):
+    def generate(self, user_input: str) -> str:
         """
-        Generate a response based on the analyzed input.
+        Generate a response based on the user input.
 
         Args:
-            analyzed_input (str): The analyzed user input.
+            user_input (str): The raw user input.
 
         Returns:
             str: The generated response.
         """
+        analyzed_input = self.input_analyzer.analyze(user_input)
         system_prompt = "You are a helpful AI assistant."
-        messages = [{"role": "user", "content": analyzed_input}]
+        messages = [{"role": "user", "content": user_input}]
         response = self.model_manager.generate_response(
             model_tier="mid",
             system_prompt=system_prompt,

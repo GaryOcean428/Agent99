@@ -2,7 +2,8 @@
 Agent99 - AI Assistant Streamlit Application
 
 This module implements a Streamlit-based chat interface for the Agent99 AI assistant.
-It uses various components to analyze user input, generate responses, and manage conversation memory.
+It uses various components to analyze user input, generate responses, and manage
+conversation memory.
 """
 
 import streamlit as st
@@ -40,11 +41,12 @@ if prompt := st.chat_input("What is your question?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     # Generate response
-    analyzed_input = input_analyzer.analyze(prompt)
-    response = response_generator.generate(analyzed_input)
+    response = response_generator.generate(prompt)
 
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
         st.markdown(response)
     # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    st.session_state.messages.append(
+        {"role": "assistant", "content": response}
+    )
