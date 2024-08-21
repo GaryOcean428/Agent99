@@ -1,5 +1,6 @@
 """
-This module provides functionality to analyze user input and classify it as simple or complex.
+This module provides functionality to analyze user input
+and classify it as simple or complex.
 """
 
 import re
@@ -43,8 +44,10 @@ class InputAnalyzer:
         ]
 
         # Check if the input matches any complex patterns
-        if any(re.search(pattern, user_input.lower())
-               for pattern in complex_patterns):
+        if any(
+            re.search(pattern, user_input.lower())
+            for pattern in complex_patterns
+        ):
             return "complex"
 
         # Check if the input matches any simple patterns
@@ -52,5 +55,6 @@ class InputAnalyzer:
                for pattern in simple_patterns):
             return "simple"
 
-        # If no clear pattern is found, default to complex for a thorough response
+        # If no clear pattern is found, default to complex
+        # for a thorough response
         return "complex"
