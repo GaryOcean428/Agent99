@@ -6,18 +6,18 @@ It mocks necessary modules and initializes key components to ensure they can be
 imported and used without errors.
 """
 
+from config import Config
+from memory_manager import MemoryManager
+from response_generator import ResponseGenerator
+from input_analyzer import InputAnalyzer
 import sys
 from unittest.mock import Mock
 
 # Mock required modules
-sys.modules['anthropic'] = Mock()
-sys.modules['groq'] = Mock()
+sys.modules["anthropic"] = Mock()
+sys.modules["groq"] = Mock()
 
 # Import components
-from input_analyzer import InputAnalyzer
-from response_generator import ResponseGenerator
-from memory_manager import MemoryManager
-from config import Config
 
 print(f"Python version: {sys.version}")
 

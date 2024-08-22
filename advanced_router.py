@@ -273,7 +273,8 @@ class AdvancedRouter:
             "temperature": 0.7,
         }
         if task_type in ["coding", "analysis"]:
-            config["temperature"] = 0.5  # Lower temperature for more precise outputs
+            # Lower temperature for more precise outputs
+            config["temperature"] = 0.5
         return config
 
     def _adjust_params_based_on_history(
