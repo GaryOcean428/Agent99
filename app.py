@@ -9,7 +9,15 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 import requests
-from flask import Flask, jsonify, request, send_from_directory, render_template, redirect, url_for
+from flask import (
+    Flask,
+    jsonify,
+    request,
+    send_from_directory,
+    render_template,
+    redirect,
+    url_for,
+)
 from werkzeug.utils import secure_filename
 from advanced_router import advanced_router
 from memory_manager import memory_manager
@@ -17,7 +25,11 @@ from search import perform_search
 from rag import retrieve_relevant_info
 from irac_framework import apply_irac_framework, apply_comparative_analysis
 from pinecone import Pinecone, ServerlessSpec
-from langchain_community.document_loaders import TextLoader, PDFMinerLoader, Docx2txtLoader
+from langchain_community.document_loaders import (
+    TextLoader,
+    PDFMinerLoader,
+    Docx2txtLoader,
+)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
@@ -73,11 +85,8 @@ if index_name not in pc.list_indexes().names():
     pc.create_index(
         name=index_name,
         dimension=3072,
-        metric='cosine',
-        spec=ServerlessSpec(
-            cloud='aws',
-            region='us-east-1'
-        )
+        metric="cosine",
+        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
     )
 vector_db = pc.Index(index_name)
 
@@ -85,55 +94,61 @@ vector_db = pc.Index(index_name)
 embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 
 # Initialize LangChain Pinecone vectorstore
-vectorstore = PineconeVectorStore(index=vector_db, embedding=embeddings, text_key="text")
+vectorstore = PineconeVectorStore(
+    index=vector_db, embedding=embeddings, text_key="text"
+)
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Configure upload folder
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'doc', 'docx'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+UPLOAD_FOLDER = "uploads"
+ALLOWED_EXTENSIONS = {"txt", "pdf", "doc", "docx"}
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # Ensure upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/', methods=['GET', 'POST'])
+
+@app.route("/", methods=["GET", "POST"])
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/upload', methods=['POST'])
+
+@app.route("/upload", methods=["POST"])
 def upload_file():
-    if 'file' not in request.files:
+    if "file" not in request.files:
         return jsonify({"error": "No file part"}), 400
-    file = request.files['file']
-    if file.filename == '':
+    file = request.files["file"]
+    if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(file_path)
         return jsonify({"message": f"File '{filename}' uploaded successfully"}), 200
     return jsonify({"error": "File type not allowed"}), 400
 
-@app.route('/chat', methods=['POST'])
+
+@app.route("/chat", methods=["POST"])
 def chat():
     data = request.json
-    user_input = data.get('message')
-    action = data.get('action', 'chat')
+    user_input = data.get("message")
+    action = data.get("action", "chat")
 
     if not user_input:
         return jsonify({"error": "Missing message"}), 400
 
     try:
-        if action == 'chat':
+        if action == "chat":
             response = chat_with_99(user_input)
-        elif action == 'upsert-project':
+        elif action == "upsert-project":
             response = upsert_to_project(user_input)
-        elif action == 'upsert-all':
+        elif action == "upsert-all":
             response = upsert_to_all_chats(user_input)
         else:
             return jsonify({"error": "Invalid action"}), 400
@@ -143,11 +158,13 @@ def chat():
         logger.error(f"An error occurred: {str(e)}")
         return jsonify({"error": "An error occurred processing your request"}), 500
 
+
 def upsert_to_project(user_input: str) -> str:
     # Implement logic to upsert the user input to the current project
     # For now, we'll just add it to the vectorstore
     vectorstore.add_texts([user_input])
     return f"Upserted to project: {user_input}"
+
 
 def upsert_to_all_chats(user_input: str) -> str:
     # Implement logic to upsert the user input to all future chats
@@ -156,9 +173,11 @@ def upsert_to_all_chats(user_input: str) -> str:
     memory_manager.add_to_long_term_memory(user_input)
     return f"Upserted to all chats: {user_input}"
 
-@app.route('/health')
+
+@app.route("/health")
 def health_check():
     return jsonify({"status": "healthy"}), 200
+
 
 def generate_response(
     model: str,
@@ -226,13 +245,14 @@ def generate_response(
         )
         return "An unexpected error occurred. Please try again or contact support if the issue persists."
 
+
 def should_perform_search(user_input: str) -> bool:
     """
     Determine if a search should be performed based on the user input.
     """
     # List of common greetings and short phrases that don't require a search
-    no_search_phrases = ['hello', 'hi', 'hey', 'greetings', 'how are you', 'what\'s up']
-    
+    no_search_phrases = ["hello", "hi", "hey", "greetings", "how are you", "what's up"]
+
     # Convert input to lowercase for case-insensitive comparison
     lower_input = user_input.lower()
 
@@ -246,6 +266,7 @@ def should_perform_search(user_input: str) -> bool:
 
     # If none of the above conditions are met, perform a search
     return True
+
 
 def get_strategy_instruction(strategy: str) -> str:
     """
@@ -263,6 +284,7 @@ def get_strategy_instruction(strategy: str) -> str:
         strategy,
         "Respond naturally to the query, providing relevant information and insights.",
     )
+
 
 class GitHubManager:
     def __init__(self):
@@ -315,7 +337,9 @@ class GitHubManager:
         """Close method for GitHubManager."""
         logger.info("GitHubManager closed")
 
+
 github_manager = GitHubManager()
+
 
 def handle_github_commands(user_input: str) -> str:
     """Handle GitHub-related commands."""
@@ -344,6 +368,7 @@ def handle_github_commands(user_input: str) -> str:
         return f"Pull request merged: {result['message']}"
 
     return "Unknown GitHub command"
+
 
 def chat_with_99(
     user_input: str, conversation_history: Optional[List[Dict[str, str]]] = None
@@ -392,9 +417,10 @@ def chat_with_99(
         )
         return "I'm sorry, but an error occurred while processing your request. Please try again later."
 
+
 if __name__ == "__main__":
     try:
-        app.run(host='0.0.0.0', port=5000)
+        app.run(host="0.0.0.0", port=5000)
     finally:
         memory_manager.cleanup_memory()
         if hasattr(github_manager, "cleanup"):

@@ -13,7 +13,8 @@ class GroqModelManager:
         self.models = {
             "low": "llama-3.1-8b-instant",
             "mid": "llama-3.1-70b-versatile",
-            "high": "llama-3.1-405b-instruct",  # Not yet available, but prepared for future use
+            # Not yet available, but prepared for future use
+            "high": "llama-3.1-405b-instruct",
         }
 
     def generate_response(

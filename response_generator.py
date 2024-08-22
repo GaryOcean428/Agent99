@@ -6,13 +6,19 @@ import os
 import logging
 from typing import List, Dict
 from anthropic import (
-    Anthropic, APIError, APIConnectionError, AuthenticationError, RateLimitError
+    Anthropic,
+    APIError,
+    APIConnectionError,
+    AuthenticationError,
+    RateLimitError,
 )
 from groq import Groq
 from input_analyzer import InputAnalyzer
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Initialize API clients
@@ -52,8 +58,10 @@ class ModelManager:
             str: The prepared system prompt.
         """
         if input_type == "complex":
-            return (f"{system_prompt}\n\nFor complex queries, "
-                    f"follow this thought process:\n{self.thought_process}")
+            return (
+                f"{system_prompt}\n\nFor complex queries, "
+                f"follow this thought process:\n{self.thought_process}"
+            )
         return system_prompt
 
     def _call_anthropic_api(
@@ -196,7 +204,11 @@ class ResponseGenerator:
             max_tokens=100,
             temperature=0.7,
         )
-        return response if response else "I'm sorry, I couldn't generate a response at this time."
+        return (
+            response
+            if response
+            else "I'm sorry, I couldn't generate a response at this time."
+        )
 
 
 model_manager = ModelManager()
