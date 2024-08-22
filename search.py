@@ -33,9 +33,7 @@ def perform_search(query: str, num_results: int = 5) -> str:
     try:
         service = build("customsearch", "v1", developerKey=API_KEY)
         res = (
-            service.cse()
-            .list(q=query, cx=SEARCH_ENGINE_ID, num=num_results)
-            .execute()
+            service.cse().list(q=query, cx=SEARCH_ENGINE_ID, num=num_results).execute()
         )
 
         search_results = []
