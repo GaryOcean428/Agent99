@@ -19,6 +19,7 @@ venv/
 ENV/
 env/
 *.virtualenv
+agent99/
 
 # Python egg files
 *.egg
